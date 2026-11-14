@@ -20,7 +20,7 @@ Every row was checked byte for byte against the spec and is covered by a unit te
 | §4.2.4 Set Lock Audio | `04` line lock location | `Command::SetLockAudio` | encoded and tested, **not exposed** |
 | §4.2.5 Set Lock Line | `05` line lock location | `Command::SetLockLine` | **LOCK** (blocks incoming calls) |
 | §4.2.6 Status Request | `06` line | `Command::StatusRequest` | connect sync, Refresh, liveness probe |
-| §4.2.7 Set Conference | `07` location on/off | `Command::SetConference` | encoded and tested, **not exposed** |
+| §4.2.7 Set Conference | `07` location on/off | `Command::SetConference` | Settings → Preferences → **Conference mode for ON-AIR A/B**; sent after every connect and when the setting changes |
 | §4.2.8 Set Next Caller | `08` audio location | `Command::SetNextCaller` | encoded and tested, **not exposed** |
 | §4.3.1 Line Status | `40` line state audio location lockAudio lockLine phone`00` name`00` first`00` city`00` | `LineStatus::from_payload` | every line card |
 
@@ -45,6 +45,12 @@ Value mappings:
 * **LOCK = lock line**: the visible LOCK button sends Set Lock Line (§4.2.5): incoming calls on that
   line are rejected with busy, outgoing calls stay possible. It can be used on a free line. Set Lock
   Audio (§4.2.4) is not offered in the UI and has no Tauri command.
+* **ON AIR without conference mode**: §4.2.3 and §4.2.7 say that with conference mode off, only
+  one caller per location can be ON AIR; putting another line on air **drops** the line already
+  there (unless it is audio-locked). PRETALK puts the previous line on HOLD instead. LineCaller
+  never lets the THipPro drop a caller this way: before it puts a line on ON-AIR A or B (Set Audio,
+  answer or dial), it first sends Set Audio HOLD for its own other lines on that bus. With
+  conference mode on, it sends nothing extra and the THipPro keeps the lines in conference.
 * **Status after reconnect**: on every (re)connect LineCaller sends a Status Request for each
   displayed line, since §4.3.1 only pushes status on change.
 
@@ -62,6 +68,8 @@ Each assumption is isolated in one place so it can be changed without touching t
 | A6 | Timeouts and back-off | Connect timeout 5 s, write timeout 3 s, reconnect back-off 0.5 / 1 / 2 / 5 / 10 / 15 s. | `connection.rs` |
 | A7 | Port per location | The spec leaves ports to the THipPro configuration. The configuration guide's defaults are 10100, 10101, 10102… per remote device; LineCaller defaults to 10100 and lets the user set host, port and location independently. It does not derive the port from the location. | `settings.rs` |
 | A8 | Busy-line guard | The backend refuses Dial on a line whose last status is not Disconnected and Set Audio on an idle or ringing line, so a second outgoing call can never be started on a busy line. | `src-tauri/src/commands.rs` |
+| A10 | Conference mode scope | The spec says "only one caller can be set to On Air" per location when conference mode is off, and §4.2.3 talks about lines "at the target audio". LineCaller reads this per bus: ON-AIR A and ON-AIR B are handled separately, so one line on each is allowed without conference mode. The HOLD-first step only touches lines owned by this location that are on the same bus and not audio-locked. | `linecaller_core::store::lines_to_hold_before` |
+| A11 | Conference mode is owned by LineCaller | Conference mode is per location (§4.2.7). LineCaller sends its own setting (on or off) after every connect, so it overrides whatever was set for that location before. | `connection.rs` |
 | A9 | Call timer | The protocol carries no timestamps. Timers count from when LineCaller received the state change. | `store.rs` |
 
 ## What was verified, and how
@@ -92,6 +100,8 @@ system before production use:
 4. Whether the liveness probe (A5) is acceptable at the chosen interval.
 5. Character encoding of screening names with accents (A3).
 6. Behaviour when two LineCaller installations use the same location.
+7. Whether conference mode (§4.2.7) applies to ON AIR 1 and ON AIR 2 separately or to both
+   together (A10), and that HOLD-then-ON-AIR in quick succession never drops the first caller.
 
 The simulator's hybrid behaviour (audio replacement, ownership, line lock) is a simplified reading
 of the spec, not a model of a real THipPro.

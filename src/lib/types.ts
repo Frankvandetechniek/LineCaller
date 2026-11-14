@@ -66,6 +66,10 @@ export interface Settings {
   livenessIntervalSecs: number;
   /** Preference: outline the whole strip in the status colour, or only colour the status line on top. */
   stripOutline: boolean;
+  /** Preference: Remote Light conference mode for ON-AIR A/B. Off: a line already on the bus goes to HOLD. */
+  conferenceMode: boolean;
+  /** Strip colour per line (index 0 = Line 1): "" = default, or "#rrggbb". */
+  lineColors: string[];
 }
 
 export interface RecentCall {

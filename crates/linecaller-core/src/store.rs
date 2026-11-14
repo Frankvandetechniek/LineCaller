@@ -90,6 +90,41 @@ impl LineStore {
     }
 }
 
+/// Lines of `location` that must go to HOLD before `target` is put on `audio`,
+/// so the THipPro never drops a caller (spec §4.2.3 / §4.2.7: with conference
+/// mode off, putting a second line on an ON AIR bus drops the line already
+/// there). Empty for PRETALK and HOLD (the THipPro itself puts a PRETALK line
+/// on HOLD), with conference mode on, and for audio-locked lines (which the
+/// THipPro conferences instead of dropping).
+pub fn lines_to_hold_before(
+    lines: &[Option<LineView>],
+    target: u8,
+    audio: rlp::Audio,
+    location: u8,
+    conference: bool,
+) -> Vec<rlp::LineIndex> {
+    use rlp::{Audio, LineState};
+    if conference || !matches!(audio, Audio::OnAir1 | Audio::OnAir2) {
+        return Vec::new();
+    }
+    lines
+        .iter()
+        .flatten()
+        .map(|v| &v.status)
+        .filter(|s| {
+            s.line.0 != target
+                && s.location == location
+                && s.audio == audio
+                && !s.audio_locked
+                && matches!(
+                    s.state,
+                    LineState::Connected | LineState::Calling | LineState::Reserved
+                )
+        })
+        .map(|s| s.line)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -141,5 +176,48 @@ mod tests {
             .unwrap();
         assert!(!v.stale);
         assert_eq!(v.state_since_ms, 1);
+    }
+
+    fn on_bus(line: u8, audio: rlp::Audio, location: u8, locked: bool) -> Option<LineView> {
+        let st = rlp::LineStatus {
+            line: rlp::LineIndex(line),
+            state: rlp::LineState::Connected,
+            audio,
+            location,
+            audio_locked: locked,
+            line_locked: false,
+            screening: Default::default(),
+        };
+        Some(LineView {
+            status: st,
+            updated_at_ms: 0,
+            state_since_ms: 0,
+            stale: false,
+        })
+    }
+
+    #[test]
+    fn second_on_air_line_puts_the_first_on_hold_unless_conference() {
+        use rlp::Audio::*;
+        let lines = vec![
+            on_bus(0, OnAir1, 1, false),
+            on_bus(1, OnAir1, 2, false), // other location: not ours to move
+            on_bus(2, OnAir2, 1, false), // other bus
+            on_bus(3, OnAir1, 1, true),  // audio-locked: THipPro conferences it
+            None,
+            on_bus(5, Pretalk, 1, false),
+        ];
+        let held: Vec<u8> = lines_to_hold_before(&lines, 5, OnAir1, 1, false)
+            .iter()
+            .map(|l| l.0)
+            .collect();
+        assert_eq!(held, vec![0]);
+        assert!(lines_to_hold_before(&lines, 5, OnAir1, 1, true).is_empty());
+        assert!(lines_to_hold_before(&lines, 0, Pretalk, 1, false).is_empty());
+        let held_b: Vec<u8> = lines_to_hold_before(&lines, 5, OnAir2, 1, false)
+            .iter()
+            .map(|l| l.0)
+            .collect();
+        assert_eq!(held_b, vec![2]);
     }
 }

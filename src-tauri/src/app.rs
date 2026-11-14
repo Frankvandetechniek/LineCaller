@@ -151,6 +151,29 @@ impl AppState {
         LineIndex::new(index).map_err(|e| AppError::new("invalid", e.to_string()))
     }
 
+    /// Without conference mode, move our other lines on the target ON AIR bus
+    /// to HOLD first, so the THipPro never drops them (spec §4.2.3, §4.2.7).
+    pub async fn hold_others_on_bus(&self, target: LineIndex, audio: rlp::Audio) -> AppResult<()> {
+        let s = self.settings();
+        let lines = self.client.lines();
+        for line in linecaller_core::store::lines_to_hold_before(
+            &lines,
+            target.0,
+            audio,
+            s.location,
+            s.conference_mode,
+        ) {
+            self.client
+                .send(rlp::Command::SetAudio {
+                    line,
+                    audio: rlp::Audio::Hold,
+                    location: self.location(),
+                })
+                .await?;
+        }
+        Ok(())
+    }
+
     /// Latest known status of a line, required to be fresh (not stale).
     pub fn fresh_line(&self, index: LineIndex) -> AppResult<LineView> {
         match self.client.line(index.0) {

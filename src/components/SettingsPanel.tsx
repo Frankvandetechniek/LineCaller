@@ -3,6 +3,7 @@ import type { AppError, Settings } from "../lib/types";
 import { MAX_LINES, MAX_LOCATIONS } from "../lib/types";
 import { AUDIO_BUTTONS } from "../lib/lineLogic";
 import { IconX } from "./Icons";
+import { LineColorPicker } from "./LineColorPicker";
 import { useDialog } from "./useDialog";
 
 export interface SettingsPanelProps {
@@ -21,6 +22,7 @@ export function SettingsPanel(p: SettingsPanelProps) {
   const [draft, setDraft] = useState<Settings>(() => ({
     ...p.settings,
     lineLabels: Array.from({ length: MAX_LINES }, (_, i) => p.settings.lineLabels[i] ?? ""),
+    lineColors: Array.from({ length: MAX_LINES }, (_, i) => p.settings.lineColors?.[i] ?? ""),
   }));
   const [error, setError] = useState<AppError | null>(null);
   const [saving, setSaving] = useState(false);
@@ -50,7 +52,11 @@ export function SettingsPanel(p: SettingsPanelProps) {
     try {
       const imported = await p.onImport();
       if (!imported) return;
-      setDraft({ ...imported, lineLabels: Array.from({ length: MAX_LINES }, (_, i) => imported.lineLabels?.[i] ?? "") });
+      setDraft({
+        ...imported,
+        lineLabels: Array.from({ length: MAX_LINES }, (_, i) => imported.lineLabels?.[i] ?? ""),
+        lineColors: Array.from({ length: MAX_LINES }, (_, i) => imported.lineColors?.[i] ?? ""),
+      });
       setError(null);
       setFileNote({ kind: "ok", text: "Configuration loaded into this form. Check the Remote Light location for this computer, then press Save settings to apply it." });
     } catch (e) {
@@ -168,14 +174,17 @@ export function SettingsPanel(p: SettingsPanelProps) {
 
           <section>
             <h3>Line labels</h3>
-            <p className="muted small">Optional names shown next to the line number, for example "Request line". Max 24 characters.</p>
+            <p className="muted small">Optional names shown next to the line number, for example "Request line". Max 24 characters. Click the colour box to give a strip its own colour.</p>
             {fieldError("lineLabels") && <p className="field-error" role="alert">{fieldError("lineLabels")}</p>}
+            {fieldError("lineColors") && <p className="field-error" role="alert">{fieldError("lineColors")}</p>}
             <div className="labels-grid">
               {Array.from({ length: draft.lineCount }, (_, i) => (
                 <label key={i} className="label-input">
                   <span>Line {i + 1}</span>
                   <input type="text" maxLength={24} value={draft.lineLabels[i]} placeholder="—"
                     onChange={(e) => { const l = [...draft.lineLabels]; l[i] = e.target.value; set("lineLabels", l); }} />
+                  <LineColorPicker lineNumber={i + 1} value={draft.lineColors[i]}
+                    onChange={(v) => { const c = [...draft.lineColors]; c[i] = v; set("lineColors", c); }} />
                 </label>
               ))}
             </div>
@@ -188,6 +197,13 @@ export function SettingsPanel(p: SettingsPanelProps) {
               <span>
                 <strong>Outline the whole channel strip</strong>
                 <span className="field-hint">On: a ringing, on-air or calling line gets a coloured outline around the entire strip. Off: only the coloured status line at the top of the strip shows it.</span>
+              </span>
+            </label>
+            <label className="switch-row">
+              <input type="checkbox" role="switch" checked={draft.conferenceMode} onChange={(e) => set("conferenceMode", e.target.checked)} />
+              <span>
+                <strong>Conference mode for ON-AIR A/B</strong>
+                <span className="field-hint">On: two or more lines can be on ON-AIR A (or ON-AIR B) at the same time, in conference. Off: putting a line on air moves the line already there to HOLD. Calls are never dropped.</span>
               </span>
             </label>
           </section>
