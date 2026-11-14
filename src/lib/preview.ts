@@ -93,12 +93,39 @@ export function previewBackend(): Backend {
     async acceptCall(i, audio) { room(i, audio); update(i, { state: { kind: "connected" }, audio, location: settings.location }); },
     async setAudio(i, audio) { room(i, audio); update(i, { audio, location: settings.location }); },
     async dropLine(i) { reset(i); },
-    async setAudioLock(i, locked) { update(i, { audioLocked: locked }); },
     async setIncomingBlock(i, locked) { update(i, { lineLocked: locked }); },
     async refreshLines() {},
     async clearRecents() { recents = []; return recents; },
     async simulateIncomingCall(i) {
       update(i, { state: { kind: "ringing" }, location: 0, screening: { phoneNumber: "+3243211234", name: "Peeters", firstName: "Lotte", city: "Antwerpen" } });
+    },
+    async exportConfig(s) {
+      const body = JSON.stringify({ format: "linecaller-config", formatVersion: 1, exportedAt: new Date().toISOString(), appVersion: "preview", settings: s }, null, 2) + "\n";
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([body], { type: "application/json" }));
+      a.download = "linecaller-config.json";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      return "linecaller-config.json (browser download)";
+    },
+    importConfig() {
+      return new Promise<Settings | null>((resolve, reject) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json,application/json";
+        input.onchange = async () => {
+          const f = input.files?.[0];
+          if (!f) return resolve(null);
+          try {
+            const parsed = JSON.parse(await f.text());
+            if (parsed?.format !== "linecaller-config") throw new Error("This is not a LineCaller configuration file.");
+            resolve({ ...DEFAULT_SETTINGS, ...parsed.settings });
+          } catch (e) {
+            reject({ code: "importFailed", message: e instanceof Error ? e.message : String(e) });
+          }
+        };
+        input.click();
+      });
     },
     async subscribe(handlers) { h = handlers; return () => { h = null; }; },
   };

@@ -13,6 +13,8 @@ export interface SettingsPanelProps {
   onSave: (s: Settings) => Promise<AppError | null>;
   onClose: () => void;
   onClearRecents: () => void;
+  onExport: (s: Settings) => Promise<string | null>;
+  onImport: () => Promise<Settings | null>;
 }
 
 export function SettingsPanel(p: SettingsPanelProps) {
@@ -22,6 +24,41 @@ export function SettingsPanel(p: SettingsPanelProps) {
   }));
   const [error, setError] = useState<AppError | null>(null);
   const [saving, setSaving] = useState(false);
+  const [fileNote, setFileNote] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  // Only one file dialog at a time (a double click would otherwise open two).
+  const [fileBusy, setFileBusy] = useState(false);
+
+  const doExport = async () => {
+    if (fileBusy) return;
+    setFileBusy(true);
+    setFileNote(null);
+    try {
+      const path = await p.onExport(draft);
+      if (path) setFileNote({ kind: "ok", text: `Configuration exported to ${path}` });
+    } catch (e) {
+      const err = e as AppError;
+      if (err.field) setError(err);
+      setFileNote({ kind: "error", text: err.message });
+    } finally {
+      setFileBusy(false);
+    }
+  };
+  const doImport = async () => {
+    if (fileBusy) return;
+    setFileBusy(true);
+    setFileNote(null);
+    try {
+      const imported = await p.onImport();
+      if (!imported) return;
+      setDraft({ ...imported, lineLabels: Array.from({ length: MAX_LINES }, (_, i) => imported.lineLabels?.[i] ?? "") });
+      setError(null);
+      setFileNote({ kind: "ok", text: "Configuration loaded into this form. Check the Remote Light location for this computer, then press Save settings to apply it." });
+    } catch (e) {
+      setFileNote({ kind: "error", text: (e as AppError).message });
+    } finally {
+      setFileBusy(false);
+    }
+  };
   const dialogRef = useDialog(p.onClose);
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setDraft((d) => ({ ...d, [k]: v }));
   const fieldError = (f: string) => (error?.field === f ? error.message : null);
@@ -142,6 +179,21 @@ export function SettingsPanel(p: SettingsPanelProps) {
                 </label>
               ))}
             </div>
+          </section>
+
+          <section>
+            <h3>Configuration file</h3>
+            <p className="muted small">
+              Copy this LineCaller's setup to another computer. Export writes a readable .json file with the settings shown in this
+              window (connection, location, lines, labels, appearance). Import loads a file into this form; nothing changes until you press Save settings.
+            </p>
+            <div className="inline">
+              <button type="button" className="secondary-btn" disabled={fileBusy} onClick={() => void doImport()}>Import configuration…</button>
+              <button type="button" className="secondary-btn" disabled={fileBusy} onClick={() => void doExport()}>Export configuration…</button>
+            </div>
+            {fileNote && (
+              <p className={fileNote.kind === "error" ? "field-error" : "file-ok"} role={fileNote.kind === "error" ? "alert" : "status"}>{fileNote.text}</p>
+            )}
           </section>
 
           <section>

@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-window",
-  "description": "The only window. It may receive LineCaller events and call LineCaller's own commands, nothing else (no file system, shell, HTTP or opener access).",
+  "description": "The only window. It may receive LineCaller events and call LineCaller's own commands, nothing else (no file system, shell, HTTP or opener access). Configuration import/export opens the native file dialog from Rust, so the window needs no dialog or file-system permission.",
   "windows": ["main"],
   "platforms": ["windows", "macOS", "linux"],
   "permissions": [
@@ -15,10 +15,11 @@
     "allow-accept-call",
     "allow-set-audio",
     "allow-drop-line",
-    "allow-set-audio-lock",
     "allow-set-incoming-block",
     "allow-refresh-lines",
     "allow-clear-recents",
-    "allow-simulate-incoming-call"
+    "allow-simulate-incoming-call",
+    "allow-export-config",
+    "allow-import-config"
   ]
 }

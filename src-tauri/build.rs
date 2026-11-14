@@ -10,11 +10,12 @@ const COMMANDS: &[&str] = &[
     "accept_call",
     "set_audio",
     "drop_line",
-    "set_audio_lock",
     "set_incoming_block",
     "refresh_lines",
     "clear_recents",
     "simulate_incoming_call",
+    "export_config",
+    "import_config",
 ];
 
 fn main() {

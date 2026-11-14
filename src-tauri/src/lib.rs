@@ -37,6 +37,7 @@ pub fn run() {
         .try_init();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let handle = app.handle().clone();
             let config_dir = app.path().app_config_dir()?;
@@ -64,11 +65,12 @@ pub fn run() {
             commands::accept_call,
             commands::set_audio,
             commands::drop_line,
-            commands::set_audio_lock,
             commands::set_incoming_block,
             commands::refresh_lines,
             commands::clear_recents,
             commands::simulate_incoming_call,
+            commands::export_config,
+            commands::import_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running LineCaller");

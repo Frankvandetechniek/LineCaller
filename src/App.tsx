@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createBackend, toAppError, type Backend } from "./lib/api";
 import type { AppError, Bootstrap, ConnectionStatus, LineView, RecentCall, SendableAudio, Settings } from "./lib/types";
 import { audioLabel, callerName, isOnAir, linePhase, type AudioAction } from "./lib/lineLogic";
-import { LineCard } from "./components/LineCard";
+import { ChannelStrip } from "./components/ChannelStrip";
 import { Keypad } from "./components/Keypad";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { ConnectionPill, ConnectionBanner } from "./components/Connection";
@@ -40,7 +40,13 @@ export default function App() {
   const applyBoot = useCallback((b: Bootstrap) => {
     setBoot(b);
     setConnection(b.connection);
-    setLines(b.lines);
+    // A line event can arrive while the bootstrap snapshot is in flight; keep whichever is newer.
+    setLines((prev) => b.lines.map((v, i) => {
+      const p = prev[i];
+      if (!v) return p ?? null;
+      if (p && p.updatedAtMs > v.updatedAtMs) return p;
+      return v;
+    }));
     setRecents(b.recents);
   }, []);
 
@@ -143,8 +149,8 @@ export default function App() {
   }, [backend, run]);
 
   const onDrop = useCallback((i: number) => { if (backend) void run(i, "drop", () => backend.dropLine(i)); }, [backend, run]);
-  const onLockAudio = useCallback((i: number, l: boolean) => { if (backend) void run(i, "lock", () => backend.setAudioLock(i, l)); }, [backend, run]);
-  const onBlock = useCallback((i: number, l: boolean) => { if (backend) void run(i, "block", () => backend.setIncomingBlock(i, l)); }, [backend, run]);
+  // LOCK = Set Lock Line (block incoming calls).
+  const onLockLine = useCallback((i: number, l: boolean) => { if (backend) void run(i, "lock", () => backend.setIncomingBlock(i, l)); }, [backend, run]);
   const onSimulate = useCallback((i: number) => { if (backend) void run(null, "sim", () => backend.simulateIncomingCall(i)); }, [backend, run]);
 
   const onCall = useCallback(async (i: number, audio: SendableAudio, number: string) => {
@@ -175,6 +181,13 @@ export default function App() {
   const visible = useMemo(() => Array.from({ length: shown }, (_, i) => lines[i] ?? null), [lines, shown]);
   const ringing = visible.filter((v) => linePhase(v, myLocation) === "ringing").length;
   const onAir = visible.filter((v) => isOnAir(v) && linePhase(v, myLocation) !== "elsewhere").length;
+  const jumpTo = (pred: (v: LineView | null) => boolean) => {
+    const i = visible.findIndex(pred);
+    if (i < 0) return;
+    const el = document.getElementById(`strip-${i}`);
+    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    el?.querySelector<HTMLButtonElement>(".answer-btn, .audio-btn")?.focus({ preventScroll: true });
+  };
   const keypadLine = keypad ? visible[keypad.lineIndex] : null;
   const keypadBusy = !!keypad && (!connected || linePhase(keypadLine, myLocation) !== "idle");
 
@@ -195,8 +208,14 @@ export default function App() {
           {backend.kind === "preview" && <span className="sim-tag" title="Running in a browser without the desktop backend">BROWSER PREVIEW</span>}
         </div>
         <div className="summary" aria-label="Line summary">
-          <span className="sum-item" data-active={ringing > 0 || undefined} data-kind="ringing"><IconBell size={15} /> {ringing} ringing</span>
-          <span className="sum-item" data-active={onAir > 0 || undefined} data-kind="onair"><IconRadio size={15} /> {onAir} on air</span>
+          <button type="button" className="sum-item" data-active={ringing > 0 || undefined} data-kind="ringing" disabled={ringing === 0}
+            title="Show the first ringing line" onClick={() => jumpTo((v) => linePhase(v, myLocation) === "ringing")}>
+            <IconBell size={15} /> {ringing} ringing
+          </button>
+          <button type="button" className="sum-item" data-active={onAir > 0 || undefined} data-kind="onair" disabled={onAir === 0}
+            title="Show the first line on air" onClick={() => jumpTo((v) => isOnAir(v) && linePhase(v, myLocation) !== "elsewhere")}>
+            <IconRadio size={15} /> {onAir} on air
+          </button>
         </div>
         <div className="top-actions">
           <ConnectionPill status={connection} location={settings.location} now={now} simulator={settings.simulator} />
@@ -219,26 +238,27 @@ export default function App() {
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <main className="lines" data-count={shown} aria-label="Lines">
-        {visible.map((v, i) => (
-          <LineCard
-            key={i}
-            index={i}
-            view={v}
-            label={settings.lineLabels[i] ?? ""}
-            myLocation={myLocation}
-            defaultAnswerAudio={settings.defaultAnswerAudio}
-            connected={connected}
-            now={now}
-            pending={pending[i]?.control ?? null}
-            simulator={settings.simulator}
-            onAudio={onAudio}
-            onDrop={onDrop}
-            onLockAudio={onLockAudio}
-            onBlockIncoming={onBlock}
-            onSimulateCall={onSimulate}
-          />
-        ))}
+      <main className="console" aria-label="Lines">
+        <div className="console-rack" data-count={shown} style={{ ["--strips" as string]: shown }}>
+          {visible.map((v, i) => (
+            <ChannelStrip
+              key={i}
+              index={i}
+              view={v}
+              label={settings.lineLabels[i] ?? ""}
+              myLocation={myLocation}
+              defaultAnswerAudio={settings.defaultAnswerAudio}
+              connected={connected}
+              now={now}
+              pending={pending[i]?.control ?? null}
+              simulator={settings.simulator}
+              onAudio={onAudio}
+              onDrop={onDrop}
+              onLockLine={onLockLine}
+              onSimulateCall={onSimulate}
+            />
+          ))}
+        </div>
       </main>
 
       <div className="sr-only" aria-live="assertive" role="status">{announce}</div>
@@ -267,6 +287,8 @@ export default function App() {
           onSave={onSaveSettings}
           onClose={() => setSettingsOpen(false)}
           onClearRecents={onClearRecents}
+          onExport={(s) => backend.exportConfig(s)}
+          onImport={() => backend.importConfig()}
         />
       )}
     </div>

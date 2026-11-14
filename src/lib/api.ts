@@ -17,11 +17,14 @@ export interface Backend {
   acceptCall(lineIndex: number, audio: SendableAudio): Promise<void>;
   setAudio(lineIndex: number, audio: SendableAudio): Promise<void>;
   dropLine(lineIndex: number): Promise<void>;
-  setAudioLock(lineIndex: number, locked: boolean): Promise<void>;
   setIncomingBlock(lineIndex: number, locked: boolean): Promise<void>;
   refreshLines(): Promise<void>;
   clearRecents(): Promise<RecentCall[]>;
   simulateIncomingCall(lineIndex: number): Promise<void>;
+  /** Save settings to a readable .json file; resolves to the path, or null if cancelled. */
+  exportConfig(settings: Settings): Promise<string | null>;
+  /** Read a .json configuration file; resolves to validated settings (not yet saved), or null if cancelled. */
+  importConfig(): Promise<Settings | null>;
   subscribe(handlers: {
     connection: (s: ConnectionStatus) => void;
     line: (v: LineView) => void;
@@ -57,11 +60,12 @@ async function tauriBackend(): Promise<Backend> {
     acceptCall: (lineIndex, audio) => call("accept_call", { lineIndex, audio }),
     setAudio: (lineIndex, audio) => call("set_audio", { lineIndex, audio }),
     dropLine: (lineIndex) => call("drop_line", { lineIndex }),
-    setAudioLock: (lineIndex, locked) => call("set_audio_lock", { lineIndex, locked }),
     setIncomingBlock: (lineIndex, locked) => call("set_incoming_block", { lineIndex, locked }),
     refreshLines: () => call("refresh_lines"),
     clearRecents: () => call("clear_recents"),
     simulateIncomingCall: (lineIndex) => call("simulate_incoming_call", { lineIndex }),
+    exportConfig: (settings) => call("export_config", { settings }),
+    importConfig: () => call("import_config"),
     async subscribe(h) {
       const offs = await Promise.all([
         listen<ConnectionStatus>(EV_CONNECTION, (e) => h.connection(e.payload)),

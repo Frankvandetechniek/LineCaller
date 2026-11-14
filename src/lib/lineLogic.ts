@@ -86,12 +86,8 @@ export function canDrop(view: LineView | null | undefined, myLocation: number, c
   return connected && (p === "ringing" || p === "calling" || p === "connected" || p === "reserved");
 }
 
-export function canLockAudio(view: LineView | null | undefined, myLocation: number, connected: boolean): boolean {
-  const p = linePhase(view, myLocation);
-  return connected && (p === "calling" || p === "connected" || p === "reserved");
-}
-
-export function canBlockIncoming(view: LineView | null | undefined, myLocation: number, connected: boolean): boolean {
+/** The LOCK button: Set Lock Line (blocks incoming calls). Allowed on any line we may control, including idle ones. */
+export function canLockLine(view: LineView | null | undefined, myLocation: number, connected: boolean): boolean {
   const p = linePhase(view, myLocation);
   return connected && p !== "unknown" && p !== "stale" && p !== "elsewhere";
 }
