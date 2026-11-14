@@ -11,7 +11,7 @@ import {
 } from "../lib/lineLogic";
 import {
   AudioIcon, IconAlert, IconBell, IconBlock, IconFlask, IconLock, IconMapPin, IconPhone,
-  IconPhoneOff, IconPhoneOutgoing, IconUnlock,
+  IconPhoneIncoming, IconPhoneOff, IconPhoneOutgoing, IconUnlock,
 } from "./Icons";
 
 export interface ChannelStripProps {
@@ -205,10 +205,10 @@ function ChannelStripImpl(p: ChannelStripProps) {
         disabled={phase !== "ringing" || !connected}
         onClick={() => p.onAudio(index, { type: "accept", audio: p.defaultAnswerAudio })}
         aria-label={`Answer line ${lineNo} to ${audioLabel(p.defaultAnswerAudio)}`}
-        title={phase === "ringing" ? `Answer onto ${audioLabel(p.defaultAnswerAudio)}` : "No incoming call"}
+        title={phase === "ringing" ? `Answer straight onto ${audioLabel(p.defaultAnswerAudio)}` : "No incoming call"}
       >
+        <IconPhoneIncoming size={16} />
         <span>ANSWER</span>
-        <span>{audioLabel(p.defaultAnswerAudio)}</span>
       </button>
 
       {/* ---- DROP / REJECT ---- */}

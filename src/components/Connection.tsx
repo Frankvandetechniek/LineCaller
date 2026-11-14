@@ -34,13 +34,7 @@ export function ConnectionBanner(p: {
   onOpenSettings: () => void;
 }) {
   const s = p.status;
-  if (s.phase === "connected") {
-    return (
-      <div className="conn-strip">
-        <button type="button" className="link-btn" onClick={p.onDisconnect}>Disconnect</button>
-      </div>
-    );
-  }
+  if (s.phase === "connected") return null;
   if (p.hostMissing) {
     return (
       <div className="banner" data-tone="off" role="region" aria-label="Connection">

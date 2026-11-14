@@ -182,6 +182,17 @@ export function SettingsPanel(p: SettingsPanelProps) {
           </section>
 
           <section>
+            <h3>Preferences</h3>
+            <label className="switch-row">
+              <input type="checkbox" role="switch" checked={draft.stripOutline} onChange={(e) => set("stripOutline", e.target.checked)} />
+              <span>
+                <strong>Outline the whole channel strip</strong>
+                <span className="field-hint">On: a ringing, on-air or calling line gets a coloured outline around the entire strip. Off: only the coloured status line at the top of the strip shows it.</span>
+              </span>
+            </label>
+          </section>
+
+          <section>
             <h3>Configuration file</h3>
             <p className="muted small">
               Copy this LineCaller's setup to another computer. Export writes a readable .json file with the settings shown in this
