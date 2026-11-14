@@ -51,6 +51,9 @@ pub struct Settings {
     /// reconnect if nothing comes back. See docs/PROTOCOL_NOTES.md.
     pub liveness_check: bool,
     pub liveness_interval_secs: u16,
+    /// Preference: outline the whole channel strip in the status colour
+    /// (on air, ringing, ...). When false only the status line on top is coloured.
+    pub strip_outline: bool,
 }
 
 impl Default for Settings {
@@ -68,6 +71,7 @@ impl Default for Settings {
             simulator: true,
             liveness_check: true,
             liveness_interval_secs: 20,
+            strip_outline: true,
         }
     }
 }

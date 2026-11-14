@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createBackend, toAppError, type Backend } from "./lib/api";
 import type { AppError, Bootstrap, ConnectionStatus, LineView, RecentCall, SendableAudio, Settings } from "./lib/types";
-import { audioLabel, callerName, isOnAir, linePhase, type AudioAction } from "./lib/lineLogic";
+import { audioLabel, callerName, linePhase, type AudioAction } from "./lib/lineLogic";
 import { ChannelStrip } from "./components/ChannelStrip";
 import { Keypad } from "./components/Keypad";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { ConnectionPill, ConnectionBanner } from "./components/Connection";
 import { Toasts, type Toast } from "./components/Toasts";
-import { IconBell, IconFlask, IconRadio, IconRefresh, IconSettings } from "./components/Icons";
+import { IconFlask, IconRefresh, IconSettings } from "./components/Icons";
 
 type Pending = Record<number, { control: string; at: number }>;
 const PENDING_TIMEOUT_MS = 4000;
@@ -118,10 +118,11 @@ export default function App() {
     const apply = () => { root.dataset.theme = theme === "system" ? (mq.matches ? "light" : "dark") : theme; };
     apply();
     root.dataset.density = settings?.density ?? "comfortable";
+    root.dataset.stripOutline = settings?.stripOutline === false ? "off" : "on";
     if (theme !== "system") return;
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
-  }, [settings?.theme, settings?.density]);
+  }, [settings?.theme, settings?.density, settings?.stripOutline]);
 
   const connected = connection?.phase === "connected";
   const myLocation = settings?.location ?? 1;
@@ -179,15 +180,6 @@ export default function App() {
 
   const shown = settings?.lineCount ?? 0;
   const visible = useMemo(() => Array.from({ length: shown }, (_, i) => lines[i] ?? null), [lines, shown]);
-  const ringing = visible.filter((v) => linePhase(v, myLocation) === "ringing").length;
-  const onAir = visible.filter((v) => isOnAir(v) && linePhase(v, myLocation) !== "elsewhere").length;
-  const jumpTo = (pred: (v: LineView | null) => boolean) => {
-    const i = visible.findIndex(pred);
-    if (i < 0) return;
-    const el = document.getElementById(`strip-${i}`);
-    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-    el?.querySelector<HTMLButtonElement>(".answer-btn, .audio-btn")?.focus({ preventScroll: true });
-  };
   const keypadLine = keypad ? visible[keypad.lineIndex] : null;
   const keypadBusy = !!keypad && (!connected || linePhase(keypadLine, myLocation) !== "idle");
 
@@ -206,16 +198,6 @@ export default function App() {
           <span className="brand-name">LineCaller</span>
           {settings.simulator && <span className="sim-tag" title="Connected to the built-in THipPro simulator. No real calls are placed."><IconFlask size={13} /> SIMULATOR</span>}
           {backend.kind === "preview" && <span className="sim-tag" title="Running in a browser without the desktop backend">BROWSER PREVIEW</span>}
-        </div>
-        <div className="summary" aria-label="Line summary">
-          <button type="button" className="sum-item" data-active={ringing > 0 || undefined} data-kind="ringing" disabled={ringing === 0}
-            title="Show the first ringing line" onClick={() => jumpTo((v) => linePhase(v, myLocation) === "ringing")}>
-            <IconBell size={15} /> {ringing} ringing
-          </button>
-          <button type="button" className="sum-item" data-active={onAir > 0 || undefined} data-kind="onair" disabled={onAir === 0}
-            title="Show the first line on air" onClick={() => jumpTo((v) => isOnAir(v) && linePhase(v, myLocation) !== "elsewhere")}>
-            <IconRadio size={15} /> {onAir} on air
-          </button>
         </div>
         <div className="top-actions">
           <ConnectionPill status={connection} location={settings.location} now={now} simulator={settings.simulator} />

@@ -64,6 +64,8 @@ export interface Settings {
   simulator: boolean;
   livenessCheck: boolean;
   livenessIntervalSecs: number;
+  /** Preference: outline the whole strip in the status colour, or only colour the status line on top. */
+  stripOutline: boolean;
 }
 
 export interface RecentCall {

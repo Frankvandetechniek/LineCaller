@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS: Settings = {
   simulator: true,
   livenessCheck: true,
   livenessIntervalSecs: 20,
+  stripOutline: true,
 };
 
 const empty = { phoneNumber: "", name: "", firstName: "", city: "" };
