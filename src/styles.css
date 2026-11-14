@@ -258,7 +258,6 @@ h1, h2, h3 { margin: 0; }
 .strip[data-phase="stale"], .strip[data-phase="unknown"] { --accent: var(--text-3); }
 .strip[data-phase="stale"] .scribble, .strip[data-phase="stale"] .audio-stack { filter: grayscale(1); opacity: 0.7; }
 .strip[data-onair] { --accent: var(--onair); border-color: var(--onair); }
-.strip[data-armed] { border-color: var(--danger); }
 
 /* Incoming call: yellow on/off blink, 500 ms on / 500 ms off, for as long as the line rings. */
 .strip[data-phase="ringing"] {
@@ -285,7 +284,7 @@ h1, h2, h3 { margin: 0; }
 
 /* Preference "Outline the whole channel strip" off: the strip border stays neutral and the
    status shows only in the coloured status line on top (which blinks yellow for an incoming call). */
-:root[data-strip-outline="off"] .strip:not([data-armed]) { border-color: var(--border); border-style: solid; }
+:root[data-strip-outline="off"] .strip { border-color: var(--border); border-style: solid; }
 :root[data-strip-outline="off"] .strip::before { height: 6px; }
 :root[data-strip-outline="off"] .strip[data-phase="ringing"] { animation: none; }
 :root[data-strip-outline="off"] .strip[data-phase="ringing"]::before { animation: rail-blink 1s linear infinite; }
@@ -450,8 +449,6 @@ h1, h2, h3 { margin: 0; }
 :root[data-density="compact"] .drop-btn { min-height: 42px; }
 .drop-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .drop-btn:disabled { opacity: 0.35; color: var(--text-3); border-color: var(--border); }
-.drop-btn[data-armed], .drop-btn[data-armed]:hover:not(:disabled) { background: var(--danger-strong); color: #fff; border-color: var(--danger-strong); }
-.drop-note { font-size: 11px; color: var(--danger); font-weight: 650; text-align: center; margin-top: -4px; }
 
 /* LOCK (block incoming calls): last on the strip, half the height of a normal button */
 .lock-btn {
@@ -662,3 +659,17 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--connecte
   .audio-btn[data-current], .lock-btn[aria-pressed="true"] { border: 3px solid Highlight; }
   .strip::before { background: CanvasText; }
 }
+
+/* ---------- settings code ---------- */
+.dialog.pin { width: min(340px, 100%); }
+.pin-hint { margin: 0 0 14px; font-size: 13px; }
+.pin-dots { display: flex; justify-content: center; gap: 14px; margin-bottom: 6px; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-strong); }
+.pin-dot[data-filled] { background: var(--text); border-color: var(--text); }
+.pin-dots[data-wrong] { animation: pin-shake 0.32s ease-in-out; }
+.pin-dots[data-wrong] .pin-dot:not([data-filled]) { border-color: var(--danger); }
+@keyframes pin-shake { 25% { transform: translateX(-7px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); } }
+.pin-error { min-height: 18px; margin: 0 0 10px; text-align: center; font-size: 13px; font-weight: 650; color: var(--danger); }
+.dialog.pin .keys { margin-bottom: 0; }
+.dialog.pin .key:disabled { opacity: 0.4; }
+@media (prefers-reduced-motion: reduce) { .pin-dots[data-wrong] { animation: none; } }
