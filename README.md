@@ -22,8 +22,8 @@ THipPro's own configuration.
 * Responsive: strips share the window width; when they no longer fit (many lines, small window,
   phone width) the console scrolls sideways with snap, like scrolling a bank.
 * Clear states with text, icon and colour: FREE, INCOMING, CALLING, CONNECTED, RESERVED,
-  IN USE (location N), UNKNOWN. An incoming line **blinks orange, 500 ms on / 500 ms off**, for as
-  long as it rings (solid orange if the OS asks for reduced motion). ON AIR lines get a red tally.
+  IN USE (location N), UNKNOWN. An incoming line **blinks yellow, 500 ms on / 500 ms off**, for as
+  long as it rings (solid yellow if the OS asks for reduced motion). ON AIR lines get a red tally.
 * Caller number, name and city from the THipPro's screening information, with a call timer.
 * Per line: PRETALK, HOLD, ON-AIR A, ON-AIR B, ANSWER, DROP, LOCK.
   * **LOCK locks the line for incoming calls** (Remote Light "Set Lock Line"): new calls are
