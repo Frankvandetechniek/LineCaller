@@ -22,6 +22,8 @@ const DEFAULT_SETTINGS: Settings = {
   livenessCheck: true,
   livenessIntervalSecs: 20,
   stripOutline: true,
+  conferenceMode: false,
+  lineColors: Array.from({ length: 16 }, () => ""),
 };
 
 const empty = { phoneNumber: "", name: "", firstName: "", city: "" };
@@ -44,7 +46,7 @@ export function previewBackend(): Backend {
   const seed = (i: number, s: Partial<LineStatus>, ago = 0) => {
     lines[i] = { ...lines[i], status: { ...lines[i].status, ...s }, stateSinceMs: now - ago };
   };
-  seed(0, { state: { kind: "connected" }, audio: "onAir1", location: 1, audioLocked: true, screening: { phoneNumber: "+31612345678", name: "de Vries", firstName: "Anouk", city: "Hilversum" } }, 192_000);
+  seed(0, { state: { kind: "connected" }, audio: "onAir1", location: 1, screening: { phoneNumber: "+31612345678", name: "de Vries", firstName: "Anouk", city: "Hilversum" } }, 192_000);
   seed(1, { state: { kind: "ringing" }, screening: { phoneNumber: "+31201234567", name: "Jansen", firstName: "Mark", city: "Amsterdam" } }, 6_000);
   seed(2, { state: { kind: "connected" }, audio: "pretalk", location: 1, screening: { phoneNumber: "0302345678", name: "", firstName: "", city: "Utrecht" } }, 41_000);
   seed(3, { state: { kind: "calling" }, audio: "hold", location: 1, screening: { ...empty, phoneNumber: "0356001122" } }, 3_000);
@@ -68,8 +70,10 @@ export function previewBackend(): Backend {
     if (audio === "hold") return;
     lines.forEach((l, i) => {
       const s = l.status;
+      // Like the desktop backend: without conference mode a line already on the
+      // target bus goes to HOLD; it is never dropped.
       if (i !== target && s.location === settings.location && s.audio === audio && !s.audioLocked && s.state.kind === "connected") {
-        if (audio === "pretalk") update(i, { audio: "hold" }); else reset(i);
+        if (audio === "pretalk" || !settings.conferenceMode) update(i, { audio: "hold" });
       }
     });
   };

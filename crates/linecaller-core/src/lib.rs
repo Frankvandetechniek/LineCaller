@@ -33,6 +33,7 @@ impl Settings {
             liveness_interval: self
                 .liveness_check
                 .then(|| std::time::Duration::from_secs(self.liveness_interval_secs as u64)),
+            conference: self.conference_mode,
         }
     }
 }

@@ -228,6 +228,7 @@ export default function App() {
               index={i}
               view={v}
               label={settings.lineLabels[i] ?? ""}
+              color={settings.lineColors?.[i] ?? ""}
               myLocation={myLocation}
               defaultAnswerAudio={settings.defaultAnswerAudio}
               connected={connected}

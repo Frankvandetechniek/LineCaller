@@ -38,6 +38,16 @@ pub struct ClientConfig {
     pub line_count: u8,
     /// `None` disables the liveness check.
     pub liveness_interval: Option<Duration>,
+    /// Conference mode for this location, sent with Set Conference (§4.2.7)
+    /// after every connect and whenever it changes.
+    pub conference: bool,
+}
+
+fn conference_cmd(cfg: &ClientConfig) -> Command {
+    Command::SetConference {
+        location: cfg.location,
+        on: cfg.conference,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -370,6 +380,9 @@ impl Task {
                 return SessionEnd::Lost(e);
             }
         }
+        if let Err(e) = write_cmd(&mut wr, &conference_cmd(&cfg)).await {
+            return SessionEnd::Lost(e);
+        }
 
         let mut last_rx = Instant::now();
         let mut probe_sent: Option<Instant> = None;
@@ -415,6 +428,12 @@ impl Task {
                                 // Same endpoint: keep the socket, sync newly shown lines.
                                 for i in cfg.line_count..n.line_count {
                                     if let Err(e) = write_cmd(&mut wr, &Command::StatusRequest { line: LineIndex(i) }).await {
+                                        self.cfg = Some(n);
+                                        return SessionEnd::Lost(e);
+                                    }
+                                }
+                                if n.conference != cfg.conference || n.location != cfg.location {
+                                    if let Err(e) = write_cmd(&mut wr, &conference_cmd(&n)).await {
                                         self.cfg = Some(n);
                                         return SessionEnd::Lost(e);
                                     }

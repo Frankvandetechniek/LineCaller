@@ -54,6 +54,12 @@ pub struct Settings {
     /// Preference: outline the whole channel strip in the status colour
     /// (on air, ringing, ...). When false only the status line on top is coloured.
     pub strip_outline: bool,
+    /// Preference: conference mode for ON-AIR A/B (Remote Light Set Conference,
+    /// spec §4.2.7). On: several lines can share an ON-AIR bus. Off: a line
+    /// already on the bus is moved to HOLD before another one takes it.
+    pub conference_mode: bool,
+    /// Optional strip colour per line (index 0 = Line 1): "" = default, or "#rrggbb".
+    pub line_colors: Vec<String>,
 }
 
 impl Default for Settings {
@@ -72,6 +78,8 @@ impl Default for Settings {
             liveness_check: true,
             liveness_interval_secs: 20,
             strip_outline: true,
+            conference_mode: false,
+            line_colors: vec![String::new(); MAX_LINES as usize],
         }
     }
 }
@@ -94,6 +102,8 @@ pub enum SettingsError {
     DefaultAnswerAudio,
     #[error("Liveness interval must be between 5 and 300 seconds.")]
     LivenessIntervalSecs,
+    #[error("Line colours must be empty (default) or a colour like #3366ff.")]
+    LineColors,
 }
 
 impl SettingsError {
@@ -107,6 +117,7 @@ impl SettingsError {
             SettingsError::LineLabels => "lineLabels",
             SettingsError::DefaultAnswerAudio => "defaultAnswerAudio",
             SettingsError::LivenessIntervalSecs => "livenessIntervalSecs",
+            SettingsError::LineColors => "lineColors",
         }
     }
 }
@@ -140,6 +151,17 @@ impl Settings {
             *l = l.trim().to_string();
             if l.chars().count() > MAX_LABEL_LEN || l.chars().any(char::is_control) {
                 return Err(SettingsError::LineLabels);
+            }
+        }
+        self.line_colors.resize(MAX_LINES as usize, String::new());
+        for c in self.line_colors.iter_mut() {
+            *c = c.trim().to_ascii_lowercase();
+            let ok = c.is_empty()
+                || (c.len() == 7
+                    && c.starts_with('#')
+                    && c[1..].chars().all(|h| h.is_ascii_hexdigit()));
+            if !ok {
+                return Err(SettingsError::LineColors);
             }
         }
         if self.default_answer_audio == Audio::Unknown {
@@ -249,5 +271,21 @@ mod tests {
         let s: Settings = serde_json::from_str(r#"{"host":"h","lineCount":4}"#).unwrap();
         assert_eq!(s.line_count, 4);
         assert_eq!(s.port, DEFAULT_RLP_PORT);
+    }
+
+    #[test]
+    fn line_colours_are_normalised_and_checked() {
+        let mut s = real();
+        s.line_colors = vec![" #AABBCC ".into(), String::new()];
+        let v = s.clone().validated().unwrap();
+        assert_eq!(v.line_colors.len(), MAX_LINES as usize);
+        assert_eq!(v.line_colors[0], "#aabbcc");
+        for bad in ["red", "#abc", "#gggggg", "aabbcc1"] {
+            s.line_colors = vec![bad.into()];
+            assert_eq!(
+                s.clone().validated().unwrap_err(),
+                SettingsError::LineColors
+            );
+        }
     }
 }

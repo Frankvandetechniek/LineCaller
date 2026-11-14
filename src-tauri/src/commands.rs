@@ -99,6 +99,7 @@ pub async fn dial(
     let v = state.fresh_line(line)?;
     state.check_owner(&v)?;
     AppState::require_state(&v, &[LineState::Disconnected], "start a call")?;
+    state.hold_others_on_bus(line, audio).await?;
     state
         .client
         .send(Command::Dial {
@@ -135,6 +136,7 @@ pub async fn accept_call(
     let v = state.fresh_line(line)?;
     state.check_owner(&v)?;
     AppState::require_state(&v, &[LineState::Ringing], "answer")?;
+    state.hold_others_on_bus(line, audio).await?;
     Ok(state
         .client
         .send(Command::Dial {
@@ -162,6 +164,7 @@ pub async fn set_audio(state: State<'_, AppState>, line_index: u8, audio: Audio)
         ],
         "change audio",
     )?;
+    state.hold_others_on_bus(line, audio).await?;
     Ok(state
         .client
         .send(Command::SetAudio {

@@ -40,6 +40,7 @@ fn cfg(port: u16, lines: u8) -> ClientConfig {
         location: Location(1),
         line_count: lines,
         liveness_interval: None,
+        conference: false,
     }
 }
 
@@ -102,12 +103,17 @@ async fn syncs_lines_and_handles_fragmented_and_invalid_input() {
     client.configure(Some(cfg(port, 3))).await;
 
     let (mut sock, _) = listener.accept().await.unwrap();
-    // Initial sync: one Status Request per displayed line, zero-based.
-    let cmds = read_commands(&mut sock, 3).await;
+    // Initial sync: one Status Request per displayed line, zero-based, then
+    // the location's conference mode (§4.2.7).
+    let cmds = read_commands(&mut sock, 4).await;
     assert_eq!(
         cmds,
         (0..3)
             .map(|i| Command::StatusRequest { line: LineIndex(i) })
+            .chain([Command::SetConference {
+                location: Location(1),
+                on: false,
+            }])
             .collect::<Vec<_>>()
     );
 
@@ -201,8 +207,14 @@ async fn reconnects_after_drop_and_marks_lines_stale() {
 
     let (mut sock2, _) = listener.accept().await.unwrap();
     assert_eq!(
-        read_commands(&mut sock2, 1).await,
-        vec![Command::StatusRequest { line: LineIndex(0) }]
+        read_commands(&mut sock2, 2).await,
+        vec![
+            Command::StatusRequest { line: LineIndex(0) },
+            Command::SetConference {
+                location: Location(1),
+                on: false
+            }
+        ]
     );
     next_matching(&mut rx, |e| matches!(e, Ev::Conn(c) if c.is_connected())).await;
 }

@@ -36,8 +36,14 @@ THipPro's own configuration.
   * Busy line: the audio buttons move the call; the keypad never opens.
 * Keypad with `*` and `#`, CALL, CLEAR and RECENTS (last 20 numbers dialled from this computer;
   picking one fills the keypad, it never calls by itself).
-* **Preferences** in Settings: outline the whole channel strip in the status colour (default), or
-  show the status only in the coloured line at the top of the strip.
+* **Preferences** in Settings:
+  * outline the whole channel strip in the status colour (default), or show the status only in
+    the coloured line at the top of the strip;
+  * **Conference mode for ON-AIR A/B** (Remote Light "Set Conference"). On: several lines can be
+    on the same ON-AIR bus together. Off (default): putting a line on air first moves the line
+    already on that bus to HOLD, so a caller is never dropped.
+* Per-line strip colour: in Settings → Line labels, click the colour box next to a label to pick
+  a preset or custom colour, or **Default** to remove it.
 * Two-step DROP / REJECT (press, then confirm within 4 s; Esc cancels).
 * Dark (default), light or system appearance; comfortable or compact density; optional line labels.
 * **Import / Export configuration** in Settings: a readable, pretty-printed `.json` file to copy the
@@ -120,7 +126,7 @@ macOS bundles on every push; the installers are attached to the run as artifacts
 ## Tests
 
 ```bash
-cargo test --workspace   # protocol, connection manager, settings, simulator (48 tests)
+cargo test --workspace   # protocol, connection manager, settings, simulator (51 tests)
 npm test                 # UI line logic (vitest)
 npm run typecheck
 ```

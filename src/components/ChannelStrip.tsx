@@ -3,7 +3,7 @@
 // with the caller and the audio destination buttons; at the bottom ANSWER,
 // DROP/REJECT and a half-height LOCK.
 
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useState, type CSSProperties } from "react";
 import type { LineView, SendableAudio } from "../lib/types";
 import {
   AUDIO_BUTTONS, audioButtonAction, audioLabel, callerName, canDrop, canLockLine,
@@ -18,6 +18,8 @@ export interface ChannelStripProps {
   index: number;
   view: LineView | null | undefined;
   label: string;
+  /** Strip colour ("#rrggbb") or "" for the default. */
+  color: string;
   myLocation: number;
   defaultAnswerAudio: SendableAudio;
   connected: boolean;
@@ -109,6 +111,8 @@ function ChannelStripImpl(p: ChannelStripProps) {
       data-onair={onAir || undefined}
       data-armed={armed || undefined}
       data-locked={lineLocked || undefined}
+      data-colored={p.color ? true : undefined}
+      style={p.color ? ({ ["--line-color" as string]: p.color } as CSSProperties) : undefined}
       aria-labelledby={titleId}
       aria-busy={p.pending ? true : undefined}
     >
@@ -152,9 +156,6 @@ function ChannelStripImpl(p: ChannelStripProps) {
           </div>
         )}
       </div>
-      {phase === "elsewhere" && (
-        <p className="strip-note">Controlled by location {st!.location}</p>
-      )}
 
       {/* ---- audio destinations ---- */}
       <div className="row-label" id={`line-${index}-audio`}>{rowLabel(phase)}</div>

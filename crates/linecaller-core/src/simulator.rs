@@ -44,6 +44,8 @@ struct SimState {
     timers: Timers,
     auto_incoming: bool,
     next_auto_call_ms: u64,
+    /// Conference mode per location (index = location), §4.2.7.
+    conference: [bool; 8],
 }
 
 const CALLERS: &[(&str, &str, &str, &str)] = &[
@@ -93,6 +95,7 @@ impl SimState {
             },
             auto_incoming: true,
             next_auto_call_ms: now_ms() + 6_000,
+            conference: [false; 8],
         }
     }
 
@@ -123,9 +126,19 @@ impl SimState {
 
     /// §4.2.3: other lines of the same location at the target interface are
     /// dropped (ON AIR) or put on HOLD (PRETALK) unless audio-locked.
-    /// Conference mode is not modelled (always off).
+    /// With conference mode on (§4.2.7) ON AIR lines are kept in conference.
     fn make_room(&mut self, target: u8, audio: Audio, location: u8, changed: &mut Vec<u8>) {
         if !matches!(audio, Audio::Pretalk | Audio::OnAir1 | Audio::OnAir2) {
+            return;
+        }
+        let on_air = matches!(audio, Audio::OnAir1 | Audio::OnAir2);
+        if on_air
+            && self
+                .conference
+                .get(location as usize)
+                .copied()
+                .unwrap_or(false)
+        {
             return;
         }
         for l in self.lines.iter_mut() {
@@ -236,7 +249,12 @@ impl SimState {
                 }
                 changed.push(line.0);
             }
-            Command::SetConference { .. } | Command::SetNextCaller { .. } => {}
+            Command::SetConference { location, on } => {
+                if let Some(c) = self.conference.get_mut(location.0 as usize) {
+                    *c = on;
+                }
+            }
+            Command::SetNextCaller { .. } => {}
         }
         changed.sort_unstable();
         changed.dedup();
@@ -489,6 +507,28 @@ mod tests {
         });
         assert_eq!(changed, vec![0, 1]);
         assert_eq!(s.lines[0].status.state, LineState::Disconnected);
+        assert_eq!(s.lines[1].status.audio, Audio::OnAir1);
+    }
+
+    #[test]
+    fn conference_mode_keeps_both_lines_on_air() {
+        let mut s = SimState::new(6);
+        let loc = Location(1);
+        s.handle(Command::SetConference {
+            location: loc,
+            on: true,
+        });
+        for (line, audio) in [(0, Audio::OnAir1), (1, Audio::OnAir1)] {
+            s.ring(line);
+            s.handle(Command::Dial {
+                line: LineIndex(line),
+                audio,
+                location: loc,
+                number: String::new(),
+            });
+        }
+        assert_eq!(s.lines[0].status.state, LineState::Connected);
+        assert_eq!(s.lines[0].status.audio, Audio::OnAir1);
         assert_eq!(s.lines[1].status.audio, Audio::OnAir1);
     }
 
