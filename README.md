@@ -92,6 +92,25 @@ npm run tauri build  # release build + installers
   `rustup target add aarch64-apple-darwin x86_64-apple-darwin` then
   `npm run tauri build -- --target universal-apple-darwin`.
 
+### Troubleshooting the macOS build
+
+**`can't find crate for core` / `can't find crate for std` with "the `x86_64-apple-darwin` target
+may not be installed"** during the universal build means the Rust that runs is not rustup's, or
+the Intel target was never added. A Rust from conda (a `(base)` prompt) or Homebrew earlier in
+`PATH` ignores `rustup target add`. Check and fix it like this:
+
+```bash
+which cargo rustc            # both must be in ~/.cargo/bin
+rustup target list --installed   # must list aarch64-apple-darwin and x86_64-apple-darwin
+conda deactivate             # if the prompt shows (base); or: conda config --set auto_activate_base false
+brew uninstall rust          # only if `which rustc` points into Homebrew
+rustup target add aarch64-apple-darwin x86_64-apple-darwin
+npm run tauri build -- --target universal-apple-darwin
+```
+
+If you only need the app for your own Mac, `npm run tauri build` (no `--target`) builds for the
+current processor and needs no extra target.
+
 The installers are unsigned. For distribution, add Windows code signing and Apple notarisation as
 described in the Tauri docs.
 
@@ -101,7 +120,7 @@ macOS bundles on every push; the installers are attached to the run as artifacts
 ## Tests
 
 ```bash
-cargo test --workspace   # protocol, connection manager, settings, simulator (47 tests)
+cargo test --workspace   # protocol, connection manager, settings, simulator (48 tests)
 npm test                 # UI line logic (vitest)
 npm run typecheck
 ```
@@ -117,9 +136,10 @@ npm run typecheck
 3. Choose how many lines to show and, optionally, label them.
 
 Settings are stored as JSON in the OS app-config folder
-(`%APPDATA%\studio.linecaller.app\settings.json` on Windows,
-`~/Library/Application Support/studio.linecaller.app/settings.json` on macOS), recent numbers in
-the app-data folder. There are no secrets to protect (the protocol has no authentication); files
+(`%APPDATA%\studio.linecaller.desktop\settings.json` on Windows,
+`~/Library/Application Support/studio.linecaller.desktop/settings.json` on macOS), recent numbers in
+the app-data folder. Version 0.1.0 used the folder `studio.linecaller.app`; on first start a newer
+version copies `settings.json` and `recents.json` from there and leaves the old folder untouched. There are no secrets to protect (the protocol has no authentication); files
 are written atomically and are owner-only on macOS.
 
 ## Copying the configuration to another computer

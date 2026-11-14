@@ -28,6 +28,32 @@ impl EventSink for TauriSink {
     }
 }
 
+/// Bundle identifier used up to 0.1.0. macOS warned about it because it ends
+/// in `.app`; the app folders are named after the identifier, so files from
+/// that folder are copied over once.
+const LEGACY_IDENTIFIER: &str = "studio.linecaller.app";
+
+/// Copies `file` from the legacy app folder next to `dir` into `dir`, unless
+/// `dir` already has it. The old file is left in place. Failures are logged and
+/// otherwise ignored: the app then starts with defaults, as on a first run.
+fn migrate_legacy_files(dir: &std::path::Path, file: &str) {
+    let target = dir.join(file);
+    if target.exists() {
+        return;
+    }
+    let Some(legacy) = dir.parent().map(|p| p.join(LEGACY_IDENTIFIER).join(file)) else {
+        return;
+    };
+    if !legacy.is_file() {
+        return;
+    }
+    let result = std::fs::create_dir_all(dir).and_then(|_| std::fs::copy(&legacy, &target));
+    match result {
+        Ok(_) => tracing::info!("copied {} from {}", file, legacy.display()),
+        Err(e) => tracing::warn!("could not copy {} from {}: {e}", file, legacy.display()),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _ = tracing_subscriber::fmt()
@@ -42,6 +68,8 @@ pub fn run() {
             let handle = app.handle().clone();
             let config_dir = app.path().app_config_dir()?;
             let data_dir = app.path().app_data_dir()?;
+            migrate_legacy_files(&config_dir, "settings.json");
+            migrate_legacy_files(&data_dir, "recents.json");
             let client = tauri::async_runtime::block_on(async {
                 ClientHandle::spawn(Arc::new(TauriSink(handle)))
             });
@@ -74,4 +102,36 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running LineCaller");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn copies_legacy_file_once_and_never_overwrites() {
+        let root = std::env::temp_dir().join(format!("lc-migrate-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let old = root.join(LEGACY_IDENTIFIER);
+        let new = root.join("studio.linecaller.desktop");
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("settings.json"), "{\"port\":10101}").unwrap();
+
+        migrate_legacy_files(&new, "settings.json");
+        assert_eq!(
+            std::fs::read_to_string(new.join("settings.json")).unwrap(),
+            "{\"port\":10101}"
+        );
+
+        std::fs::write(new.join("settings.json"), "{\"port\":10102}").unwrap();
+        migrate_legacy_files(&new, "settings.json");
+        assert_eq!(
+            std::fs::read_to_string(new.join("settings.json")).unwrap(),
+            "{\"port\":10102}"
+        );
+
+        migrate_legacy_files(&new, "recents.json"); // no legacy file: nothing happens
+        assert!(!new.join("recents.json").exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }
