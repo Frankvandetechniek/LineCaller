@@ -2,7 +2,9 @@
 //! connection handle and (in simulator mode) the simulator.
 
 use linecaller_core::persist::{load_json, save_json};
-use linecaller_core::{ClientConfig, ClientHandle, LineView, Recents, Settings, Simulator};
+use linecaller_core::{
+    ClientConfig, ClientHandle, LevelLink, LineView, Recents, Settings, Simulator,
+};
 use rlp::{LineIndex, LineState, Location};
 use serde::Serialize;
 use std::path::PathBuf;
@@ -13,6 +15,8 @@ pub struct AppState {
     pub settings: Mutex<Settings>,
     pub recents: Mutex<Recents>,
     pub simulator: tokio::sync::Mutex<Option<Simulator>>,
+    /// Optional read-only Command Protocol link for the level meters.
+    pub level_link: LevelLink,
     /// False after the user pressed Disconnect, until they press Connect.
     pub want_connected: Mutex<bool>,
     pub settings_path: PathBuf,
@@ -64,7 +68,12 @@ impl From<linecaller_core::SettingsError> for AppError {
 pub type AppResult<T> = Result<T, AppError>;
 
 impl AppState {
-    pub fn load(client: ClientHandle, config_dir: PathBuf, data_dir: PathBuf) -> Self {
+    pub fn load(
+        client: ClientHandle,
+        level_link: LevelLink,
+        config_dir: PathBuf,
+        data_dir: PathBuf,
+    ) -> Self {
         let settings_path = config_dir.join("settings.json");
         let recents_path = data_dir.join("recents.json");
         let settings: Settings = load_json(&settings_path);
@@ -76,6 +85,7 @@ impl AppState {
             settings: Mutex::new(settings),
             recents: Mutex::new(recents),
             simulator: tokio::sync::Mutex::new(None),
+            level_link,
             want_connected: Mutex::new(auto),
             settings_path,
             recents_path,
@@ -117,6 +127,8 @@ impl AppState {
             (want && !s.host.is_empty()).then(|| s.client_config())
         };
         drop(sim);
+        self.level_link
+            .configure(if want { s.level_config() } else { None });
         self.client.configure(cfg).await;
         Ok(())
     }

@@ -13,6 +13,7 @@ use tauri::{AppHandle, Emitter, Manager};
 pub const EV_CONNECTION: &str = "lc://connection";
 pub const EV_LINE: &str = "lc://line";
 pub const EV_WARNING: &str = "lc://warning";
+pub const EV_LEVELS: &str = "lc://levels";
 
 struct TauriSink(AppHandle);
 
@@ -25,6 +26,9 @@ impl EventSink for TauriSink {
     }
     fn warning(&self, message: &str) {
         let _ = self.0.emit_to("main", EV_WARNING, message);
+    }
+    fn levels(&self, levels: &linecaller_core::LineLevels) {
+        let _ = self.0.emit_to("main", EV_LEVELS, levels);
     }
 }
 
@@ -70,11 +74,34 @@ pub fn run() {
             let data_dir = app.path().app_data_dir()?;
             migrate_legacy_files(&config_dir, "settings.json");
             migrate_legacy_files(&data_dir, "recents.json");
-            let client = tauri::async_runtime::block_on(async {
-                ClientHandle::spawn(Arc::new(TauriSink(handle)))
+            let (client, level_link) = tauri::async_runtime::block_on(async {
+                (
+                    ClientHandle::spawn(Arc::new(TauriSink(handle.clone()))),
+                    linecaller_core::LevelLink::spawn(Arc::new(TauriSink(handle))),
+                )
             });
-            let state = AppState::load(client, config_dir, data_dir);
+            let state = AppState::load(client, level_link, config_dir, data_dir);
             app.manage(state);
+            // R/T level meters, 20 times a second. Only the simulator has levels
+            // for now: the Remote Light Protocol carries none (see levels.rs).
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let mut iv = tokio::time::interval(std::time::Duration::from_millis(50));
+                loop {
+                    iv.tick().await;
+                    let state = handle.state::<AppState>();
+                    if !state.client.status().is_connected() {
+                        continue;
+                    }
+                    let levels = match state.simulator.try_lock() {
+                        Ok(sim) => sim.as_ref().map(|s| s.levels()),
+                        Err(_) => None,
+                    };
+                    if let Some(l) = levels {
+                        let _ = handle.emit_to("main", EV_LEVELS, l);
+                    }
+                }
+            });
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = handle.state::<AppState>().apply_connection().await {

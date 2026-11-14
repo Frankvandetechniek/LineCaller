@@ -9,6 +9,7 @@ import {
   AUDIO_BUTTONS, audioButtonAction, audioLabel, callerName, canDrop, canLockLine,
   formatDuration, isOnAir, linePhase, type AudioAction, type Phase,
 } from "../lib/lineLogic";
+import { LevelMeters } from "./LevelMeters";
 import {
   AudioIcon, IconAlert, IconBell, IconBlock, IconFlask, IconLock, IconMapPin, IconPhone,
   IconPhoneIncoming, IconPhoneOff, IconPhoneOutgoing, IconUnlock,
@@ -95,6 +96,7 @@ function ChannelStripImpl(p: ChannelStripProps) {
   const elapsed = formatDuration(now - (view?.stateSinceMs ?? now));
 
   // Two-step DROP: first press arms, second confirms, auto-disarms after 4 s.
+  // REJECT on a ringing line acts on the first press.
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (!armed) return;
@@ -156,6 +158,9 @@ function ChannelStripImpl(p: ChannelStripProps) {
           </div>
         )}
       </div>
+
+      {/* ---- R/T level meters ---- */}
+      <LevelMeters line={index} />
 
       {/* ---- audio destinations ---- */}
       <div className="row-label" id={`line-${index}-audio`}>{rowLabel(phase)}</div>
@@ -222,6 +227,8 @@ function ChannelStripImpl(p: ChannelStripProps) {
         aria-describedby={armed ? `line-${index}-dropnote` : undefined}
         aria-label={armed ? `Confirm: ${phase === "ringing" ? "reject call" : "drop call"} on line ${lineNo}` : `${phase === "ringing" ? "Reject" : "Drop"} line ${lineNo}`}
         onClick={() => {
+          // An incoming call is rejected at once; a call in progress needs a confirming second press.
+          if (phase === "ringing") { setArmed(false); p.onDrop(index); return; }
           if (!armed) { setArmed(true); return; }
           setArmed(false);
           p.onDrop(index);

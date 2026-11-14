@@ -38,6 +38,9 @@
   --lock: #9a4dff;
   --on-lock: #ffffff;
   --answer: #34d27b;
+  --meter-low: #2fbf71;
+  --meter-mid: #e8b423;
+  --meter-high: #ff4433;
   --block: #ff8a65;
 
   --a-pretalk: #ff9a2e;
@@ -84,6 +87,9 @@
   --lock: #7a2bd6;
   --on-lock: #ffffff;
   --answer: #0f7a3f;
+  --meter-low: #1f9d57;
+  --meter-mid: #c99400;
+  --meter-high: #d0201f;
   --block: #b23c12;
 
   --a-pretalk: #b35300;
@@ -354,6 +360,28 @@ h1, h2, h3 { margin: 0; }
 .scr-audio { display: inline-flex; align-items: center; gap: 3px; color: var(--text-2); font-size: 10.5px; letter-spacing: 0.4px; }
 .scr-empty { display: flex; flex-direction: column; gap: 2px; font-size: 15px; font-weight: 700; color: var(--text-2); }
 
+/* R/T level meters: slim LED-style bars, -60…0 dBFS. Green to -18, amber to -6, red above. */
+.meters { display: flex; flex-direction: column; gap: 4px; padding: 2px 1px; }
+.meter { display: flex; align-items: center; gap: 6px; }
+.meter-tag { flex: none; width: 9px; font-size: 9.5px; font-weight: 850; letter-spacing: 0.3px; color: var(--text-3); text-align: center; }
+.meter-track {
+  position: relative; flex: 1; height: 5px; border-radius: 2px; overflow: hidden;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+}
+.meter-track::after { /* segment gaps */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(90deg, transparent 0 3px, var(--surface) 3px 4px);
+  opacity: 0.55;
+}
+.meter-fill {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, var(--meter-low) 0 70%, var(--meter-mid) 70% 90%, var(--meter-high) 90%);
+  clip-path: inset(0 100% 0 0);
+}
+.meter-peak { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -2px; background: var(--text-2); opacity: 0; }
+.meter[data-live="false"] .meter-track { opacity: 0.45; }
+.meter[data-live="false"] .meter-tag { opacity: 0.5; }
+
 /* audio destination buttons, stacked like channel assign keys */
 .row-label { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); text-align: center; margin-bottom: -3px; }
 .audio-stack { display: flex; flex-direction: column; gap: 5px; }
@@ -541,9 +569,10 @@ legend { padding: 0; font-size: 12px; font-weight: 700; color: var(--text-3); le
 .settings-body section { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; }
 .settings-body h3 { font-size: 14px; font-weight: 750; }
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px 16px; margin-top: 4px; }
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field-label { font-size: 13px; font-weight: 650; color: var(--text-2); }
-.field input[type="text"], .field input[type="number"], .field select, .label-input input, .inline input[type="number"] {
+.field input[type="text"], .field input[type="password"], .field input[type="number"], .field select, .label-input input, .inline input[type="number"] {
   height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface-2);
 }
 .field input:disabled { opacity: 0.5; }

@@ -59,7 +59,9 @@ pub fn export_json(
     app_version: &str,
     now_ms: u64,
 ) -> Result<String, SettingsError> {
-    let settings = settings.clone().validated()?;
+    let mut settings = settings.clone().validated()?;
+    // A password does not belong in a file that is copied between computers.
+    settings.level_password.clear();
     let file = ConfigFile {
         format: FORMAT.into(),
         format_version: FORMAT_VERSION,
@@ -123,6 +125,15 @@ mod tests {
         };
         s.line_labels[0] = "Studio hotline".into();
         s
+    }
+
+    #[test]
+    fn export_leaves_out_the_level_password() {
+        let mut s = sample();
+        s.level_password = "secret".into();
+        let json = export_json(&s, "0.2.0", 0).unwrap();
+        assert!(!json.contains("secret"));
+        assert_eq!(import_json(&json).unwrap().level_password, "");
     }
 
     #[test]

@@ -44,7 +44,13 @@ THipPro's own configuration.
     already on that bus to HOLD, so a caller is never dropped.
 * Per-line strip colour: in Settings → Line labels, click the colour box next to a label to pick
   a preset or custom colour, or **Default** to remove it.
-* Two-step DROP / REJECT (press, then confirm within 4 s; Esc cancels).
+* REJECT on an incoming call acts at once. DROP on a call in progress is two-step (press, then
+  confirm within 4 s; Esc cancels).
+* **R/T level meters** on every strip: receive (R) and transmit (T) level in dBFS (−60…0), with
+  smooth ballistics and a peak hold. The levels come from the THipPro's Command Protocol over an
+  optional, read-only second connection (Settings → Preferences → **Level meters from the
+  THipPro**; it uses one licensed PC connection). In simulator mode they show simulated levels;
+  without data the meters are dimmed.
 * Dark (default), light or system appearance; comfortable or compact density; optional line labels.
 * **Import / Export configuration** in Settings: a readable, pretty-printed `.json` file to copy the
   setup from one computer to the next (see below).
@@ -126,7 +132,7 @@ macOS bundles on every push; the installers are attached to the run as artifacts
 ## Tests
 
 ```bash
-cargo test --workspace   # protocol, connection manager, settings, simulator (51 tests)
+cargo test --workspace   # protocol, connection manager, settings, simulator (58 tests)
 npm test                 # UI line logic (vitest)
 npm run typecheck
 ```

@@ -206,6 +206,32 @@ export function SettingsPanel(p: SettingsPanelProps) {
                 <span className="field-hint">On: two or more lines can be on ON-AIR A (or ON-AIR B) at the same time, in conference. Off: putting a line on air moves the line already there to HOLD. Calls are never dropped.</span>
               </span>
             </label>
+            <label className="switch-row">
+              <input type="checkbox" role="switch" checked={draft.levelMeters} onChange={(e) => set("levelMeters", e.target.checked)} />
+              <span>
+                <strong>Level meters from the THipPro</strong>
+                <span className="field-hint">Shows the real receive (R) and transmit (T) level of each line. LineCaller opens a second, read-only connection to the THipPro's control port and only listens: it uses one of the THipPro's licensed PC connections. In simulator mode the meters always show simulated levels.</span>
+              </span>
+            </label>
+            {draft.levelMeters && (
+              <div className="grid-3">
+                <Field label="Control port" error={fieldError("levelPort")} hint="THipPro default 10000">
+                  <input type="number" min={1} max={65535} value={draft.levelPort}
+                    onChange={(e) => set("levelPort", Number(e.target.value))} aria-invalid={!!fieldError("levelPort")} />
+                </Field>
+                <Field label="Connect as" error={fieldError("levelConnectionType")} hint="Connection type the THipPro allows">
+                  <select value={draft.levelConnectionType} onChange={(e) => set("levelConnectionType", Number(e.target.value))}>
+                    <option value={2}>Screener</option>
+                    <option value={1}>MAGIC Touch</option>
+                    <option value={0}>Maintenance</option>
+                  </select>
+                </Field>
+                <Field label="Password" error={fieldError("levelPassword")} hint="Only if the THipPro has one. Not exported.">
+                  <input type="password" maxLength={20} value={draft.levelPassword} autoComplete="off"
+                    onChange={(e) => set("levelPassword", e.target.value)} aria-invalid={!!fieldError("levelPassword")} />
+                </Field>
+              </div>
+            )}
           </section>
 
           <section>

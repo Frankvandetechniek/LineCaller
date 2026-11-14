@@ -60,6 +60,15 @@ pub struct Settings {
     pub conference_mode: bool,
     /// Optional strip colour per line (index 0 = Line 1): "" = default, or "#rrggbb".
     pub line_colors: Vec<String>,
+    /// Optional read-only Command Protocol link for the R/T level meters.
+    pub level_meters: bool,
+    /// THipPro control port for the Command Protocol (configuration guide default 10000).
+    pub level_port: u16,
+    /// Poll connection type: 0 Maintenance, 1 MAGIC Touch, 2 Screener.
+    pub level_connection_type: u8,
+    /// Password for the Command Protocol connection, if the THipPro has one.
+    /// Never written to an exported configuration file.
+    pub level_password: String,
 }
 
 impl Default for Settings {
@@ -80,6 +89,10 @@ impl Default for Settings {
             strip_outline: true,
             conference_mode: false,
             line_colors: vec![String::new(); MAX_LINES as usize],
+            level_meters: false,
+            level_port: 10000,
+            level_connection_type: 2,
+            level_password: String::new(),
         }
     }
 }
@@ -104,6 +117,12 @@ pub enum SettingsError {
     LivenessIntervalSecs,
     #[error("Line colours must be empty (default) or a colour like #3366ff.")]
     LineColors,
+    #[error("Level meter port must be between 1 and 65535.")]
+    LevelPort,
+    #[error("Choose a connection type for the level meters.")]
+    LevelConnectionType,
+    #[error("The level meter password can be at most 20 plain characters.")]
+    LevelPassword,
 }
 
 impl SettingsError {
@@ -118,6 +137,9 @@ impl SettingsError {
             SettingsError::DefaultAnswerAudio => "defaultAnswerAudio",
             SettingsError::LivenessIntervalSecs => "livenessIntervalSecs",
             SettingsError::LineColors => "lineColors",
+            SettingsError::LevelPort => "levelPort",
+            SettingsError::LevelConnectionType => "levelConnectionType",
+            SettingsError::LevelPassword => "levelPassword",
         }
     }
 }
@@ -163,6 +185,20 @@ impl Settings {
             if !ok {
                 return Err(SettingsError::LineColors);
             }
+        }
+        if self.level_port == 0 {
+            return Err(SettingsError::LevelPort);
+        }
+        if self.level_connection_type > 2 {
+            return Err(SettingsError::LevelConnectionType);
+        }
+        if self.level_password.len() > 20
+            || !self
+                .level_password
+                .chars()
+                .all(|c| c.is_ascii_graphic() || c == ' ')
+        {
+            return Err(SettingsError::LevelPassword);
         }
         if self.default_answer_audio == Audio::Unknown {
             return Err(SettingsError::DefaultAnswerAudio);

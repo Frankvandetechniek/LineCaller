@@ -70,6 +70,19 @@ export interface Settings {
   conferenceMode: boolean;
   /** Strip colour per line (index 0 = Line 1): "" = default, or "#rrggbb". */
   lineColors: string[];
+  /** Optional read-only Command Protocol link for the R/T level meters. */
+  levelMeters: boolean;
+  levelPort: number;
+  /** Poll connection type: 0 Maintenance, 1 MAGIC Touch, 2 Screener. */
+  levelConnectionType: number;
+  levelPassword: string;
+}
+
+/** R/T meter levels in dB per line (index 0 = Line 1); -128 = no audio. */
+export interface LineLevels {
+  rx: number[];
+  tx: number[];
+  source: "simulator" | "thippro" | "preview";
 }
 
 export interface RecentCall {

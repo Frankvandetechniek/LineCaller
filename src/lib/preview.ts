@@ -24,6 +24,10 @@ const DEFAULT_SETTINGS: Settings = {
   stripOutline: true,
   conferenceMode: false,
   lineColors: Array.from({ length: 16 }, () => ""),
+  levelMeters: false,
+  levelPort: 10000,
+  levelConnectionType: 2,
+  levelPassword: "",
 };
 
 const empty = { phoneNumber: "", name: "", firstName: "", city: "" };
@@ -132,6 +136,27 @@ export function previewBackend(): Backend {
         input.click();
       });
     },
-    async subscribe(handlers) { h = handlers; return () => { h = null; }; },
+    async subscribe(handlers) {
+      h = handlers;
+      // Fake R/T levels for the browser preview (not THipPro data).
+      const env = lines.map(() => ({ rx: -60, tx: -60 }));
+      const timer = setInterval(() => {
+        if (connection.phase !== "connected") return;
+        const rx: number[] = [], tx: number[] = [];
+        lines.forEach((l, i) => {
+          const k = l.status.state.kind;
+          const e = env[i];
+          if (k === "connected") {
+            e.rx += ((Math.random() < 0.82 ? -30 + Math.random() * 22 : -58) - e.rx) * 0.4;
+            e.tx += ((l.status.audio === "hold" ? -21 + Math.random() * 4 : -34 + Math.random() * 22) - e.tx) * 0.4;
+            rx.push(Math.round(e.rx)); tx.push(Math.round(e.tx));
+          } else if (k === "calling") {
+            rx.push(Date.now() % 5000 < 1000 ? -18 : -70); tx.push(-70);
+          } else { rx.push(-128); tx.push(-128); }
+        });
+        h?.levels({ rx, tx, source: "preview" });
+      }, 50);
+      return () => { clearInterval(timer); h = null; };
+    },
   };
 }
