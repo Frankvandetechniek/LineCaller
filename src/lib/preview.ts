@@ -93,7 +93,6 @@ export function previewBackend(): Backend {
     async acceptCall(i, audio) { room(i, audio); update(i, { state: { kind: "connected" }, audio, location: settings.location }); },
     async setAudio(i, audio) { room(i, audio); update(i, { audio, location: settings.location }); },
     async dropLine(i) { reset(i); },
-    async setAudioLock(i, locked) { update(i, { audioLocked: locked }); },
     async setIncomingBlock(i, locked) { update(i, { lineLocked: locked }); },
     async refreshLines() {},
     async clearRecents() { recents = []; return recents; },

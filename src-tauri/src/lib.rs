@@ -65,7 +65,6 @@ pub fn run() {
             commands::accept_call,
             commands::set_audio,
             commands::drop_line,
-            commands::set_audio_lock,
             commands::set_incoming_block,
             commands::refresh_lines,
             commands::clear_recents,

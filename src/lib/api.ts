@@ -17,7 +17,6 @@ export interface Backend {
   acceptCall(lineIndex: number, audio: SendableAudio): Promise<void>;
   setAudio(lineIndex: number, audio: SendableAudio): Promise<void>;
   dropLine(lineIndex: number): Promise<void>;
-  setAudioLock(lineIndex: number, locked: boolean): Promise<void>;
   setIncomingBlock(lineIndex: number, locked: boolean): Promise<void>;
   refreshLines(): Promise<void>;
   clearRecents(): Promise<RecentCall[]>;
@@ -61,7 +60,6 @@ async function tauriBackend(): Promise<Backend> {
     acceptCall: (lineIndex, audio) => call("accept_call", { lineIndex, audio }),
     setAudio: (lineIndex, audio) => call("set_audio", { lineIndex, audio }),
     dropLine: (lineIndex) => call("drop_line", { lineIndex }),
-    setAudioLock: (lineIndex, locked) => call("set_audio_lock", { lineIndex, locked }),
     setIncomingBlock: (lineIndex, locked) => call("set_incoming_block", { lineIndex, locked }),
     refreshLines: () => call("refresh_lines"),
     clearRecents: () => call("clear_recents"),

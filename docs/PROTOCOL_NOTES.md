@@ -17,7 +17,7 @@ Every row was checked byte for byte against the spec and is covered by a unit te
 | §4.2.1 Dial / Accept | `01` line audio location number… `00` | `Command::Dial` | keypad CALL; Answer (empty number) |
 | §4.2.2 Drop | `02` line location | `Command::Drop` | DROP / REJECT |
 | §4.2.3 Set Audio | `03` line audio location | `Command::SetAudio` | PRETALK / HOLD / ON-AIR A / ON-AIR B on a busy line |
-| §4.2.4 Set Lock Audio | `04` line lock location | `Command::SetLockAudio` | small "Audio lock" toggle |
+| §4.2.4 Set Lock Audio | `04` line lock location | `Command::SetLockAudio` | encoded and tested, **not exposed** |
 | §4.2.5 Set Lock Line | `05` line lock location | `Command::SetLockLine` | **LOCK** (blocks incoming calls) |
 | §4.2.6 Status Request | `06` line | `Command::StatusRequest` | connect sync, Refresh, liveness probe |
 | §4.2.7 Set Conference | `07` location on/off | `Command::SetConference` | encoded and tested, **not exposed** |
@@ -44,7 +44,7 @@ Value mappings:
   the backend refuses to send commands for it.
 * **LOCK = lock line**: the visible LOCK button sends Set Lock Line (§4.2.5): incoming calls on that
   line are rejected with busy, outgoing calls stay possible. It can be used on a free line. Set Lock
-  Audio (§4.2.4) is a separate, smaller "Audio lock" toggle. The two are never combined.
+  Audio (§4.2.4) is not offered in the UI and has no Tauri command.
 * **Status after reconnect**: on every (re)connect LineCaller sends a Status Request for each
   displayed line, since §4.3.1 only pushes status on change.
 

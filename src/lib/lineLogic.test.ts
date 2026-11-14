@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { audioButtonAction, canDrop, canLockAudio, canLockLine, formatDuration, linePhase, sanitizeNumber } from "./lineLogic";
+import { audioButtonAction, canDrop, canLockLine, formatDuration, linePhase, sanitizeNumber } from "./lineLogic";
 import type { LineState, LineView } from "./types";
 
 function view(kind: LineState["kind"], extra: Partial<LineView["status"]> = {}, stale = false): LineView {
@@ -52,8 +52,6 @@ describe("line rules", () => {
   it("drop and lock availability", () => {
     expect(canDrop(view("disconnected"), 1, true)).toBe(false);
     expect(canDrop(view("ringing"), 1, true)).toBe(true);
-    expect(canLockAudio(view("ringing"), 1, true)).toBe(false);
-    expect(canLockAudio(view("connected", { location: 1 }), 1, true)).toBe(true);
     // LOCK (block incoming) works on a free line, not on one owned elsewhere or when stale
     expect(canLockLine(view("disconnected"), 1, true)).toBe(true);
     expect(canLockLine(view("connected", { location: 4 }), 1, true)).toBe(false);

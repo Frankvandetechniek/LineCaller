@@ -192,26 +192,6 @@ pub async fn drop_line(state: State<'_, AppState>, line_index: u8) -> AppResult<
         .await?)
 }
 
-/// The secondary "Audio lock" toggle: Set Lock Audio (spec §4.2.4).
-#[tauri::command]
-pub async fn set_audio_lock(
-    state: State<'_, AppState>,
-    line_index: u8,
-    locked: bool,
-) -> AppResult<()> {
-    let line = state.check_line(line_index)?;
-    let v = state.fresh_line(line)?;
-    state.check_owner(&v)?;
-    Ok(state
-        .client
-        .send(Command::SetLockAudio {
-            line,
-            locked,
-            location: state.location(),
-        })
-        .await?)
-}
-
 /// The LOCK button: Set Lock Line (spec §4.2.5), rejects incoming calls with busy.
 #[tauri::command]
 pub async fn set_incoming_block(

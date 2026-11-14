@@ -5,7 +5,7 @@
 import { memo, useEffect, useState } from "react";
 import type { LineView, SendableAudio } from "../lib/types";
 import {
-  AUDIO_BUTTONS, audioButtonAction, audioLabel, callerName, canDrop, canLockAudio, canLockLine,
+  AUDIO_BUTTONS, audioButtonAction, audioLabel, callerName, canDrop, canLockLine,
   formatDuration, isOnAir, linePhase, type AudioAction, type Phase,
 } from "../lib/lineLogic";
 import {
@@ -28,8 +28,6 @@ export interface ChannelStripProps {
   onDrop: (index: number) => void;
   /** LOCK button: Set Lock Line (block incoming calls). */
   onLockLine: (index: number, locked: boolean) => void;
-  /** Secondary toggle: Set Lock Audio. */
-  onLockAudio: (index: number, locked: boolean) => void;
   onSimulateCall: (index: number) => void;
 }
 
@@ -89,7 +87,6 @@ function ChannelStripImpl(p: ChannelStripProps) {
   const busy = phase === "ringing" || phase === "calling" || phase === "connected" || phase === "reserved";
   const showCaller = busy || phase === "elsewhere" || (phase === "stale" && st?.state.kind !== "disconnected");
   const lineLocked = fresh && !!st?.lineLocked;
-  const audioLocked = fresh && !!st?.audioLocked;
   const lineNo = index + 1;
   const titleId = `line-${index}-title`;
   const elapsed = formatDuration(now - (view?.stateSinceMs ?? now));
@@ -222,18 +219,6 @@ function ChannelStripImpl(p: ChannelStripProps) {
           {lineLocked ? <IconLock size={15} /> : <IconUnlock size={15} />}
           <span className="lock-text">{lineLocked ? "LOCKED" : "LOCK"}</span>
           <small>{lineLocked ? "no incoming" : "incoming open"}</small>
-        </button>
-        <button
-          type="button"
-          className="mini-toggle"
-          aria-pressed={audioLocked}
-          disabled={!canLockAudio(view, myLocation, connected)}
-          data-pending={p.pending === "audiolock" || undefined}
-          title="Audio lock: keep this call on its current audio when another caller is put on air or pretalk (Set Lock Audio)"
-          onClick={() => p.onLockAudio(index, !st?.audioLocked)}
-        >
-          <span className="tick" aria-hidden="true" />
-          Audio lock
         </button>
       </div>
 

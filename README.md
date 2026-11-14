@@ -29,8 +29,6 @@ THipPro's own configuration.
 * Per line: PRETALK, HOLD, ON-AIR A, ON-AIR B, LOCK, DROP.
   * **LOCK locks the line for incoming calls** (Remote Light "Set Lock Line"): new calls are
     rejected with busy, outgoing calls still work. Works on a free line too.
-  * A small secondary **Audio lock** toggle keeps a call on its destination when another caller is
-    put on air (Remote Light "Set Lock Audio").
   * Free line: the audio buttons open the dial keypad with that destination preselected.
   * Ringing line: a large **Answer to …** button (default destination is a setting), or answer
     straight onto any destination.
@@ -58,7 +56,7 @@ src/                     React + TypeScript UI (no protocol code)
 docs/PROTOCOL_NOTES.md   spec mapping, assumptions, what is and isn't verified
 ```
 
-The frontend never opens sockets or builds packets. It calls 13 narrowly scoped Tauri commands
+The frontend never opens sockets or builds packets. It calls 14 narrowly scoped Tauri commands
 and listens to three events (`lc://connection`, `lc://line`, `lc://warning`). The window's
 capability (`src-tauri/capabilities/default.json`) allows only those commands plus event
 listening: no file system, shell, HTTP or opener access. A strict CSP is set in

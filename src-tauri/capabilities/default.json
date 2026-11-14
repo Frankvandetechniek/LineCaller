@@ -15,7 +15,6 @@
     "allow-accept-call",
     "allow-set-audio",
     "allow-drop-line",
-    "allow-set-audio-lock",
     "allow-set-incoming-block",
     "allow-refresh-lines",
     "allow-clear-recents",

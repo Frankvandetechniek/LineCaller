@@ -149,9 +149,8 @@ export default function App() {
   }, [backend, run]);
 
   const onDrop = useCallback((i: number) => { if (backend) void run(i, "drop", () => backend.dropLine(i)); }, [backend, run]);
-  // LOCK = Set Lock Line (block incoming calls). Audio lock is a separate, secondary toggle.
+  // LOCK = Set Lock Line (block incoming calls).
   const onLockLine = useCallback((i: number, l: boolean) => { if (backend) void run(i, "lock", () => backend.setIncomingBlock(i, l)); }, [backend, run]);
-  const onLockAudio = useCallback((i: number, l: boolean) => { if (backend) void run(i, "audiolock", () => backend.setAudioLock(i, l)); }, [backend, run]);
   const onSimulate = useCallback((i: number) => { if (backend) void run(null, "sim", () => backend.simulateIncomingCall(i)); }, [backend, run]);
 
   const onCall = useCallback(async (i: number, audio: SendableAudio, number: string) => {
@@ -256,7 +255,6 @@ export default function App() {
               onAudio={onAudio}
               onDrop={onDrop}
               onLockLine={onLockLine}
-              onLockAudio={onLockAudio}
               onSimulateCall={onSimulate}
             />
           ))}
