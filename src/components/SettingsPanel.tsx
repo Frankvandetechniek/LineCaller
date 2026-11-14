@@ -1,0 +1,180 @@
+import { useState } from "react";
+import type { AppError, Settings } from "../lib/types";
+import { MAX_LINES, MAX_LOCATIONS } from "../lib/types";
+import { AUDIO_BUTTONS } from "../lib/lineLogic";
+import { IconX } from "./Icons";
+import { useDialog } from "./useDialog";
+
+export interface SettingsPanelProps {
+  settings: Settings;
+  version: string;
+  previewMode: boolean;
+  recentsCount: number;
+  onSave: (s: Settings) => Promise<AppError | null>;
+  onClose: () => void;
+  onClearRecents: () => void;
+}
+
+export function SettingsPanel(p: SettingsPanelProps) {
+  const [draft, setDraft] = useState<Settings>(() => ({
+    ...p.settings,
+    lineLabels: Array.from({ length: MAX_LINES }, (_, i) => p.settings.lineLabels[i] ?? ""),
+  }));
+  const [error, setError] = useState<AppError | null>(null);
+  const [saving, setSaving] = useState(false);
+  const dialogRef = useDialog(p.onClose);
+  const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setDraft((d) => ({ ...d, [k]: v }));
+  const fieldError = (f: string) => (error?.field === f ? error.message : null);
+
+  const save = async () => {
+    setSaving(true);
+    const err = await p.onSave(draft);
+    setSaving(false);
+    if (err) setError(err); else p.onClose();
+  };
+
+  return (
+    <div className="scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) p.onClose(); }}>
+      <div ref={dialogRef} className="dialog settings" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <header className="dialog-head">
+          <div>
+            <div className="eyebrow">LineCaller preferences</div>
+            <h2 id="settings-title">Settings</h2>
+          </div>
+          <button type="button" className="icon-btn" onClick={p.onClose} aria-label="Close settings"><IconX /></button>
+        </header>
+
+        <form className="settings-body" onSubmit={(e) => { e.preventDefault(); void save(); }} noValidate>
+          <section>
+            <h3>THipPro connection</h3>
+            <label className="switch-row">
+              <input type="checkbox" role="switch" checked={draft.simulator} onChange={(e) => set("simulator", e.target.checked)} />
+              <span>
+                <strong>Simulator mode</strong>
+                <small>Use the built-in THipPro simulator. No real calls are placed. Turn off to connect to a real system.</small>
+              </span>
+            </label>
+            <div className="grid-2">
+              <Field label="THipPro host or IP" error={fieldError("host")} hint={draft.simulator ? "Not used in simulator mode" : "For example 192.168.1.50"}>
+                <input type="text" value={draft.host} disabled={draft.simulator} autoComplete="off" spellCheck={false}
+                  onChange={(e) => set("host", e.target.value)} aria-invalid={!!fieldError("host")} />
+              </Field>
+              <Field label="Remote Light port" error={fieldError("port")} hint="THipPro default 10100 + (location − 1)">
+                <input type="number" min={1} max={65535} value={draft.port} disabled={draft.simulator}
+                  onChange={(e) => set("port", Number(e.target.value))} aria-invalid={!!fieldError("port")} />
+              </Field>
+            </div>
+            <div className="grid-2">
+              <Field label="Remote Light location" error={fieldError("location")} hint="This installation's location (1–6), as configured on the THipPro">
+                <select value={draft.location} onChange={(e) => set("location", Number(e.target.value))}>
+                  {Array.from({ length: MAX_LOCATIONS }, (_, i) => i + 1).map((n) => <option key={n} value={n}>Location {n}</option>)}
+                </select>
+              </Field>
+              <fieldset className="field">
+                <legend>Liveness check</legend>
+                <div className="inline">
+                  <input type="checkbox" checked={draft.livenessCheck} onChange={(e) => set("livenessCheck", e.target.checked)} aria-label="Enable liveness check" />
+                  <input type="number" min={5} max={300} value={draft.livenessIntervalSecs} disabled={!draft.livenessCheck}
+                    onChange={(e) => set("livenessIntervalSecs", Number(e.target.value))} aria-label="Liveness interval in seconds" />
+                  <span className="muted">seconds</span>
+                </div>
+                {fieldError("livenessIntervalSecs")
+                  ? <span className="field-error" role="alert">{fieldError("livenessIntervalSecs")}</span>
+                  : <span className="field-hint">Send a status request when the link has been quiet; reconnect if there is no reply</span>}
+              </fieldset>
+            </div>
+            <label className="switch-row">
+              <input type="checkbox" role="switch" checked={draft.autoConnect} onChange={(e) => set("autoConnect", e.target.checked)} />
+              <span><strong>Connect on start-up</strong></span>
+            </label>
+          </section>
+
+          <section>
+            <h3>Display</h3>
+            <div className="grid-2">
+              <Field label="Lines to show" error={fieldError("lineCount")} hint="Lines 1 to N are shown (max 16)">
+                <select value={draft.lineCount} onChange={(e) => set("lineCount", Number(e.target.value))}>
+                  {Array.from({ length: MAX_LINES }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} {n === 1 ? "line" : "lines"}</option>)}
+                </select>
+              </Field>
+              <Field label="Answer incoming calls to" error={fieldError("defaultAnswerAudio")} hint="Used by the Answer button">
+                <select value={draft.defaultAnswerAudio} onChange={(e) => set("defaultAnswerAudio", e.target.value as Settings["defaultAnswerAudio"])}>
+                  {AUDIO_BUTTONS.map((b) => <option key={b.audio} value={b.audio}>{b.label}</option>)}
+                </select>
+              </Field>
+            </div>
+            <div className="grid-2">
+              <fieldset className="field">
+                <legend>Appearance</legend>
+                <div className="seg">
+                  {(["dark", "light", "system"] as const).map((t) => (
+                    <label key={t} className="seg-opt">
+                      <input type="radio" name="theme" checked={draft.theme === t} onChange={() => set("theme", t)} />
+                      <span>{t === "dark" ? "Dark" : t === "light" ? "Light" : "System"}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className="field">
+                <legend>Density</legend>
+                <div className="seg">
+                  {(["comfortable", "compact"] as const).map((d) => (
+                    <label key={d} className="seg-opt">
+                      <input type="radio" name="density" checked={draft.density === d} onChange={() => set("density", d)} />
+                      <span>{d === "comfortable" ? "Comfortable" : "Compact"}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </div>
+          </section>
+
+          <section>
+            <h3>Line labels</h3>
+            <p className="muted small">Optional names shown next to the line number, for example "Request line". Max 24 characters.</p>
+            {fieldError("lineLabels") && <p className="field-error" role="alert">{fieldError("lineLabels")}</p>}
+            <div className="labels-grid">
+              {Array.from({ length: draft.lineCount }, (_, i) => (
+                <label key={i} className="label-input">
+                  <span>Line {i + 1}</span>
+                  <input type="text" maxLength={24} value={draft.lineLabels[i]} placeholder="—"
+                    onChange={(e) => { const l = [...draft.lineLabels]; l[i] = e.target.value; set("lineLabels", l); }} />
+                </label>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3>Recent numbers</h3>
+            <div className="inline">
+              <span className="muted">{p.recentsCount} of 20 stored on this computer.</span>
+              <button type="button" className="ghost-btn" disabled={p.recentsCount === 0} onClick={p.onClearRecents}>Clear recents</button>
+            </div>
+          </section>
+
+          <section className="about">
+            <p className="muted small">
+              LineCaller {p.version}{p.previewMode ? " (browser preview: settings are not sent to a THipPro)" : ""}. Uses the AVT Remote Light Protocol v1 for line control and status only. LineCaller never changes the THipPro's own configuration.
+            </p>
+          </section>
+
+          {error && !error.field && <p className="field-error" role="alert">{error.message}</p>}
+          <div className="dialog-actions">
+            <button type="button" className="secondary-btn" onClick={p.onClose}>Cancel</button>
+            <button type="submit" className="primary-btn" disabled={saving}>{saving ? "Saving…" : "Save settings"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, hint, error, children }: { label: string; hint?: string; error: string | null; children: React.ReactNode }) {
+  return (
+    <label className="field" data-invalid={error ? true : undefined}>
+      <span className="field-label">{label}</span>
+      {children}
+      {error ? <span className="field-error" role="alert">{error}</span> : hint ? <span className="field-hint">{hint}</span> : null}
+    </label>
+  );
+}

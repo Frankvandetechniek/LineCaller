@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d2230"/>
+      <stop offset="1" stop-color="#0d1017"/>
+    </linearGradient>
+    <linearGradient id="lamp" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff6a4d"/>
+      <stop offset="1" stop-color="#e2342b"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <rect x="64.5" y="64.5" width="895" height="895" rx="199.5" fill="none" stroke="#ffffff" stroke-opacity=".08" stroke-width="3"/>
+  <!-- handset -->
+  <path transform="translate(232 250) scale(17.5)" fill="#f2f4f8"
+    d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z"/>
+  <!-- on-air signal -->
+  <circle cx="676" cy="348" r="58" fill="url(#lamp)"/>
+  <path d="M676 214a134 134 0 0 1 134 134" fill="none" stroke="#ff6a4d" stroke-width="34" stroke-linecap="round"/>
+  <path d="M676 128a220 220 0 0 1 220 220" fill="none" stroke="#ff6a4d" stroke-opacity=".55" stroke-width="34" stroke-linecap="round"/>
+</svg>

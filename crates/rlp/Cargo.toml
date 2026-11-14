@@ -1,0 +1,13 @@
+[package]
+name = "linecaller-rlp"
+description = "AVT Remote Light Protocol v1 framing and message codec (no I/O)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "rlp"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
