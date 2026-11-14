@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-simulate-incoming-call"
+description = "Enables the simulate_incoming_call command without any pre-configured scope."
+commands.allow = ["simulate_incoming_call"]
+
+[[permission]]
+identifier = "deny-simulate-incoming-call"
+description = "Denies the simulate_incoming_call command without any pre-configured scope."
+commands.deny = ["simulate_incoming_call"]
