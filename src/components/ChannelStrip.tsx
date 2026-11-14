@@ -85,6 +85,7 @@ function ChannelStripImpl(p: ChannelStripProps) {
   const st = view?.status;
   const fresh = !!view && !view.stale;
   const onAir = isOnAir(view) && phase !== "elsewhere";
+  const bus = onAir ? (st!.audio === "onAir1" ? "A" : "B") : "";
   const name = callerName(view);
   const number = st?.screening.phoneNumber ?? "";
   const city = st?.screening.city ?? "";
@@ -109,11 +110,12 @@ function ChannelStripImpl(p: ChannelStripProps) {
     >
       {/* ---- head: number, label, state ---- */}
       <header className="strip-head">
-        <div className="strip-tally" aria-hidden="true">{onAir ? `ON AIR ${st!.audio === "onAir1" ? "A" : "B"}` : " "}</div>
-        <div className="strip-num" aria-hidden="true">{lineNo}</div>
+        <div className="strip-tally" aria-hidden="true">{onAir ? `ON AIR ${bus}` : " "}</div>
+        {/* While on air the square shows the bus (A/B) instead of the line number. */}
+        <div className="strip-num" aria-hidden="true" data-bus={bus || undefined} title={bus ? `Line ${lineNo}, on air ${bus}` : undefined}>{bus || lineNo}</div>
         <h2 id={titleId} className="strip-title">
           <span className="sr-only">Line {lineNo}{p.label ? `, ${p.label}` : ""}: {PHASE_LONG[phase]}</span>
-          <span className="strip-label" aria-hidden="true" title={p.label || `Line ${lineNo}`}>{p.label || `Line ${lineNo}`}</span>
+          <span className="strip-label" aria-hidden="true" title={p.label || `Line ${lineNo}`}>{bus && p.label ? `${lineNo} · ${p.label}` : p.label || `Line ${lineNo}`}</span>
         </h2>
         <div className="badge" data-phase={phase} aria-hidden="true">
           <PhaseIcon phase={phase} />
