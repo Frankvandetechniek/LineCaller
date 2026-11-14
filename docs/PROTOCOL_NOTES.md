@@ -4,7 +4,8 @@ LineCaller implements the **AVT Remote Light Protocol, version 1.0 (10.10.17)** 
 This file records how each part of the spec maps to code, what was verified and how, and every
 place where LineCaller had to make an assumption because the spec is silent.
 
-The AVT THipPro Command Protocol was used only as background. Nothing from it is implemented.
+Call control uses only the Remote Light Protocol. The AVT THipPro Command Protocol is used for one
+read-only purpose, the optional R/T level meters (see the last section).
 
 ## Spec-to-code checklist
 
@@ -72,6 +73,33 @@ Each assumption is isolated in one place so it can be changed without touching t
 | A11 | Conference mode is owned by LineCaller | Conference mode is per location (§4.2.7). LineCaller sends its own setting (on or off) after every connect, so it overrides whatever was set for that location before. | `connection.rs` |
 | A9 | Call timer | The protocol carries no timestamps. Timers count from when LineCaller received the state change. | `store.rs` |
 
+## Level meters: read-only Command Protocol link
+
+The Remote Light Protocol carries no audio levels. The Command Protocol does: **Audio Level
+information** (§20.2, telegram type `6C`, code `0E`), which the unit sends at 20 Hz in 1 dB steps.
+With **Level meters from the THipPro** turned on (off by default, never in simulator mode),
+LineCaller opens a second TCP connection to the THipPro host on the control port (configuration
+guide default 10000) and:
+
+* sends only **Poll** telegrams (§3.4, type `34`): one to connect and one every 2 s to stay
+  connected (the unit drops a PC after 5 s of silence, §3). Poll does not use the sequence counter,
+  so LineCaller never sends a numbered command and never changes anything on the unit;
+* parses only Audio Level information and Connection Reject (§3.3, shown once as a warning);
+  everything else is ignored.
+
+Code: `crates/linecaller-core/src/cmdproto.rs` (framing, CRC-16/X.25, parsing) and
+`level_link.rs` (connection). The password is stored with the settings but never exported.
+
+| # | Topic | What LineCaller does |
+|---|---|---|
+| L1 | Transport | The document does not name a transport. LineCaller uses TCP to the control port the LAN Client uses. |
+| L2 | Addresses | §2.2 says ports should be 0 in standard applications; the unit/source addresses are not specified and are also sent as 0. |
+| L3 | Connection type | Poll needs a connection type. Default **Screener**; MAGIC Touch or Maintenance can be chosen if the unit restricts types (cfg entry 71h). |
+| L4 | Level layout | Every documented version (03h–09h) lists Line In 1–16 first and the outputs in the same order after all inputs, so Line Out 1 is at half the level bytes. Unknown versions are parsed the same way. |
+| L5 | R and T | "Line In" is read as the level received from the caller (R), "Line Out" as the level sent to the caller (T). |
+| L6 | dBFS | The spec gives 1 dB steps but no reference level. The meters show the value as dBFS, −60…0. |
+| L7 | Subscription | The spec says the unit sends levels to "the PC" at 20 Hz; LineCaller assumes no extra request is needed after Poll. |
+
 ## What was verified, and how
 
 * **Byte layouts**: unit tests compare every command and the Line Status against hand-written
@@ -102,6 +130,9 @@ system before production use:
 6. Behaviour when two LineCaller installations use the same location.
 7. Whether conference mode (§4.2.7) applies to ON AIR 1 and ON AIR 2 separately or to both
    together (A10), and that HOLD-then-ON-AIR in quick succession never drops the first caller.
+8. Level meters (L1–L7): that a TCP Poll connection on the control port is accepted, which
+   connection type is needed, that levels then arrive without a further request, and that the
+   R/T direction and dB reference match what the LAN Client shows.
 
 The simulator's hybrid behaviour (audio replacement, ownership, line lock) is a simplified reading
 of the spec, not a model of a real THipPro.

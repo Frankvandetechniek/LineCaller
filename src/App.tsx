@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createBackend, toAppError, type Backend } from "./lib/api";
 import type { AppError, Bootstrap, ConnectionStatus, LineView, RecentCall, SendableAudio, Settings } from "./lib/types";
+import { pushLevels } from "./lib/levels";
 import { audioLabel, callerName, linePhase, type AudioAction } from "./lib/lineLogic";
 import { ChannelStrip } from "./components/ChannelStrip";
 import { Keypad } from "./components/Keypad";
@@ -59,6 +60,7 @@ export default function App() {
         const be = await createBackend();
         unsub = await be.subscribe({
           connection: (s) => setConnection(s),
+          levels: pushLevels,
           line: (v) => {
             setLines((prev) => {
               const next = prev.slice();

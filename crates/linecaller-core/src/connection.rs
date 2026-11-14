@@ -101,6 +101,8 @@ pub trait EventSink: Send + Sync + 'static {
     fn connection(&self, status: &ConnectionStatus);
     fn line(&self, view: &LineView);
     fn warning(&self, message: &str);
+    /// R/T meter levels (simulator or the optional level link).
+    fn levels(&self, _levels: &crate::LineLevels) {}
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq, Serialize)]

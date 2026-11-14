@@ -1,11 +1,12 @@
 // The only module that talks to the backend. Everything protocol related
 // happens in Rust; the UI calls these commands and listens to three events.
 
-import type { AppError, Bootstrap, ConnectionStatus, LineView, RecentCall, SendableAudio, Settings } from "./types";
+import type { AppError, Bootstrap, ConnectionStatus, LineView, RecentCall, SendableAudio, Settings, LineLevels } from "./types";
 
 export const EV_CONNECTION = "lc://connection";
 export const EV_LINE = "lc://line";
 export const EV_WARNING = "lc://warning";
+export const EV_LEVELS = "lc://levels";
 
 export interface Backend {
   readonly kind: "tauri" | "preview";
@@ -29,6 +30,7 @@ export interface Backend {
     connection: (s: ConnectionStatus) => void;
     line: (v: LineView) => void;
     warning: (msg: string) => void;
+    levels: (l: LineLevels) => void;
   }): Promise<() => void>;
 }
 
@@ -71,6 +73,7 @@ async function tauriBackend(): Promise<Backend> {
         listen<ConnectionStatus>(EV_CONNECTION, (e) => h.connection(e.payload)),
         listen<LineView>(EV_LINE, (e) => h.line(e.payload)),
         listen<string>(EV_WARNING, (e) => h.warning(e.payload)),
+        listen<LineLevels>(EV_LEVELS, (e) => h.levels(e.payload)),
       ]);
       return () => offs.forEach((off) => off());
     },

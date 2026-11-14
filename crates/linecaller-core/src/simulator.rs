@@ -46,6 +46,9 @@ struct SimState {
     next_auto_call_ms: u64,
     /// Conference mode per location (index = location), §4.2.7.
     conference: [bool; 8],
+    /// Smoothed fake speech envelopes per line (dB), for the level meters.
+    env_rx: Vec<f32>,
+    env_tx: Vec<f32>,
 }
 
 const CALLERS: &[(&str, &str, &str, &str)] = &[
@@ -96,6 +99,8 @@ impl SimState {
             auto_incoming: true,
             next_auto_call_ms: now_ms() + 6_000,
             conference: [false; 8],
+            env_rx: vec![-60.0; MAX_LINES as usize],
+            env_tx: vec![-60.0; MAX_LINES as usize],
         }
     }
 
@@ -399,6 +404,62 @@ impl Simulator {
         s.next_auto_call_ms = now_ms() + 6_000;
     }
 
+    /// Fake R/T levels (dB) for the meters, meant to be called about 20
+    /// times a second. Connected lines get a speech-like envelope on receive;
+    /// transmit carries studio audio on PRETALK/ON AIR and hold music on HOLD.
+    /// Calling lines get a ringback tone on receive. Not THipPro data.
+    pub fn levels(&self) -> crate::LineLevels {
+        let mut s = self.state.lock().unwrap();
+        let n = s.lines.len();
+        let (mut rx, mut tx) = (Vec::with_capacity(n), Vec::with_capacity(n));
+        let t = now_ms();
+        for i in 0..n {
+            let st = s.lines[i].status.clone();
+            let (r_target, t_target): (Option<f32>, Option<f32>) = match st.state {
+                LineState::Connected => {
+                    let talking = s.rand() % 100 < 82;
+                    let r = if talking {
+                        -30.0 + (s.rand() % 22) as f32
+                    } else {
+                        -58.0
+                    };
+                    let tx = match st.audio {
+                        Audio::Hold => -22.0 + (s.rand() % 5) as f32,
+                        _ => -34.0 + (s.rand() % 22) as f32,
+                    };
+                    (Some(r), Some(tx))
+                }
+                // Ringback: 1 s on, 4 s off.
+                LineState::Calling => (
+                    Some(if t % 5000 < 1000 { -18.0 } else { -70.0 }),
+                    Some(-70.0),
+                ),
+                _ => (None, None),
+            };
+            let state = &mut *s;
+            for (env, target, out) in [
+                (&mut state.env_rx[i], r_target, &mut rx),
+                (&mut state.env_tx[i], t_target, &mut tx),
+            ] {
+                match target {
+                    Some(v) => {
+                        *env += (v - *env) * if v > *env { 0.6 } else { 0.25 };
+                        out.push(env.round().clamp(-127.0, 0.0) as i8);
+                    }
+                    None => {
+                        *env = -60.0;
+                        out.push(crate::levels::SILENCE_DB);
+                    }
+                }
+            }
+        }
+        crate::LineLevels {
+            rx,
+            tx,
+            source: "simulator",
+        }
+    }
+
     /// Make a line ring with a fake caller. Returns false if the line is busy or locked.
     pub fn incoming_call(&self, line: LineIndex) -> bool {
         let st = {
@@ -508,6 +569,29 @@ mod tests {
         assert_eq!(changed, vec![0, 1]);
         assert_eq!(s.lines[0].status.state, LineState::Disconnected);
         assert_eq!(s.lines[1].status.audio, Audio::OnAir1);
+    }
+
+    #[tokio::test]
+    async fn levels_only_for_lines_with_audio() {
+        let sim = Simulator::start("127.0.0.1:0".parse().unwrap(), 1)
+            .await
+            .unwrap();
+        sim.fast_timers();
+        sim.incoming_call(LineIndex(2));
+        {
+            let mut s = sim.state.lock().unwrap();
+            s.handle(Command::Dial {
+                line: LineIndex(2),
+                audio: Audio::Pretalk,
+                location: Location(1),
+                number: String::new(),
+            });
+        }
+        let l = sim.levels();
+        assert_eq!(l.rx.len(), MAX_LINES as usize);
+        assert_eq!(l.rx[0], crate::levels::SILENCE_DB);
+        assert!(l.rx[2] > -128 && l.rx[2] <= 0);
+        assert!(l.tx[2] > -128 && l.tx[2] <= 0);
     }
 
     #[test]
