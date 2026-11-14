@@ -6,6 +6,7 @@
 //! * [`recents`] – last 20 dialled numbers.
 //! * [`simulator`] – a THipPro stand-in that speaks RLP over TCP.
 
+pub mod config_file;
 pub mod connection;
 pub mod persist;
 pub mod recents;

@@ -16,12 +16,21 @@ THipPro's own configuration.
 
 ## Features
 
-* 1 to 16 line controls (configurable per installation), laid out in a responsive grid.
-* Clear states with text, icon and colour: FREE, INCOMING CALL, CALLING OUT, CONNECTED,
-  RESERVED, IN USE BY LOCATION N, STATUS UNKNOWN. ON AIR lines get a red banner.
+* 1 to 16 lines (configurable per installation), each drawn as a vertical **channel strip** side
+  by side, like the fader modules of a mixing console: number and state on top, a caller display,
+  the destination keys, LOCK, and DROP at the bottom.
+* Responsive: strips share the window width; when they no longer fit (many lines, small window,
+  phone width) the console scrolls sideways with snap, like scrolling a bank. The "ringing" and
+  "on air" counters in the top bar jump to the first matching line.
+* Clear states with text, icon and colour: FREE, INCOMING, CALLING, CONNECTED, RESERVED,
+  IN USE (location N), UNKNOWN. An incoming line **blinks orange, 500 ms on / 500 ms off**, for as
+  long as it rings (solid orange if the OS asks for reduced motion). ON AIR lines get a red tally.
 * Caller number, name and city from the THipPro's screening information, with a call timer.
-* Per line: PRETALK, HOLD, ON-AIR A, ON-AIR B, LOCK, DROP, plus a separate "Block incoming calls"
-  toggle.
+* Per line: PRETALK, HOLD, ON-AIR A, ON-AIR B, LOCK, DROP.
+  * **LOCK locks the line for incoming calls** (Remote Light "Set Lock Line"): new calls are
+    rejected with busy, outgoing calls still work. Works on a free line too.
+  * A small secondary **Audio lock** toggle keeps a call on its destination when another caller is
+    put on air (Remote Light "Set Lock Audio").
   * Free line: the audio buttons open the dial keypad with that destination preselected.
   * Ringing line: a large **Answer to …** button (default destination is a setting), or answer
     straight onto any destination.
@@ -30,6 +39,8 @@ THipPro's own configuration.
   picking one fills the keypad, it never calls by itself).
 * Two-step DROP / REJECT (press, then confirm within 4 s; Esc cancels).
 * Dark (default), light or system appearance; comfortable or compact density; optional line labels.
+* **Import / Export configuration** in Settings: a readable, pretty-printed `.json` file to copy the
+  setup from one computer to the next (see below).
 * Automatic reconnect with back-off, stale-status marking, protocol warnings shown in the UI.
 * **Simulator mode** (on by default): a built-in THipPro stand-in that speaks the real protocol over
   TCP, so the whole app can be tried without placing real calls.
@@ -89,7 +100,7 @@ macOS bundles on every push; the installers are attached to the run as artifacts
 ## Tests
 
 ```bash
-cargo test --workspace   # protocol, connection manager, settings, simulator (43 tests)
+cargo test --workspace   # protocol, connection manager, settings, simulator (47 tests)
 npm test                 # UI line logic (vitest)
 npm run typecheck
 ```
@@ -109,6 +120,45 @@ Settings are stored as JSON in the OS app-config folder
 `~/Library/Application Support/studio.linecaller.app/settings.json` on macOS), recent numbers in
 the app-data folder. There are no secrets to protect (the protocol has no authentication); files
 are written atomically and are owner-only on macOS.
+
+## Copying the configuration to another computer
+
+In **Settings → Configuration file**:
+
+* **Export configuration…** saves the settings shown in the window to a `.json` file you choose.
+* **Import configuration…** loads such a file into the Settings form. Nothing is applied until you
+  press **Save settings**, so you can first change what must differ per computer, usually the
+  **Remote Light location** (and its port).
+
+The file is plain, indented JSON that can be read and edited by hand:
+
+```json
+{
+  "format": "linecaller-config",
+  "formatVersion": 1,
+  "exportedAt": "2026-11-14T06:47:15Z",
+  "appVersion": "0.1.0",
+  "settings": {
+    "host": "192.168.1.50",
+    "port": 10100,
+    "location": 1,
+    "lineCount": 8,
+    "theme": "dark",
+    "density": "comfortable",
+    "lineLabels": ["Studio hotline", "Request line", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+    "defaultAnswerAudio": "pretalk",
+    "autoConnect": true,
+    "simulator": false,
+    "livenessCheck": true,
+    "livenessIntervalSecs": 20
+  }
+}
+```
+
+On import the file is checked: it must say `"format": "linecaller-config"`, settings that are
+missing get their defaults, unknown keys are ignored, and invalid values (for example location 7)
+are refused with a clear message. Recent numbers are not part of the file. The file dialogs are
+opened by the Rust backend, so the window still has no file-system permission.
 
 ## Trying it without a THipPro
 

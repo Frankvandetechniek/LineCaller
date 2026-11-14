@@ -15,6 +15,8 @@ const COMMANDS: &[&str] = &[
     "refresh_lines",
     "clear_recents",
     "simulate_incoming_call",
+    "export_config",
+    "import_config",
 ];
 
 fn main() {

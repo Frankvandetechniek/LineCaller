@@ -192,7 +192,7 @@ pub async fn drop_line(state: State<'_, AppState>, line_index: u8) -> AppResult<
         .await?)
 }
 
-/// The LOCK button: Set Lock Audio (spec §4.2.4).
+/// The secondary "Audio lock" toggle: Set Lock Audio (spec §4.2.4).
 #[tauri::command]
 pub async fn set_audio_lock(
     state: State<'_, AppState>,
@@ -212,7 +212,7 @@ pub async fn set_audio_lock(
         .await?)
 }
 
-/// "Block incoming calls": Set Lock Line (spec §4.2.5). Kept separate from LOCK.
+/// The LOCK button: Set Lock Line (spec §4.2.5), rejects incoming calls with busy.
 #[tauri::command]
 pub async fn set_incoming_block(
     state: State<'_, AppState>,
@@ -276,4 +276,87 @@ pub async fn simulate_incoming_call(state: State<'_, AppState>, line_index: u8) 
             ),
         ))
     }
+}
+
+/// Export the given settings (as shown in the Settings window) to a
+/// pretty-printed JSON file chosen in a native Save dialog. The dialog runs in
+/// Rust, so the UI never handles file paths or needs file-system access.
+/// Returns the file path, or `None` if the user cancelled.
+#[tauri::command]
+pub async fn export_config(app: tauri::AppHandle, settings: Settings) -> AppResult<Option<String>> {
+    use tauri_plugin_dialog::DialogExt;
+    let json = linecaller_core::config_file::export_json(
+        &settings,
+        env!("CARGO_PKG_VERSION"),
+        linecaller_core::store::now_ms(),
+    )?;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .set_title("Export LineCaller configuration")
+        .add_filter("LineCaller configuration (JSON)", &["json"])
+        .set_file_name(linecaller_core::config_file::DEFAULT_FILE_NAME)
+        .save_file(move |p| {
+            let _ = tx.send(p);
+        });
+    let Some(path) = rx.await.ok().flatten() else {
+        return Ok(None);
+    };
+    let mut path = path
+        .into_path()
+        .map_err(|e| AppError::new("storage", e.to_string()))?;
+    if path.extension().is_none() {
+        path.set_extension("json");
+    }
+    std::fs::write(&path, json).map_err(|e| {
+        AppError::new(
+            "storage",
+            format!("Could not write {}: {e}", path.display()),
+        )
+    })?;
+    Ok(Some(path.display().to_string()))
+}
+
+/// Read a configuration file chosen in a native Open dialog and return the
+/// validated settings. Nothing is saved: the UI loads them into the Settings
+/// form so the user can review (for example change the location) and Save.
+#[tauri::command]
+pub async fn import_config(app: tauri::AppHandle) -> AppResult<Option<Settings>> {
+    use linecaller_core::config_file::{import_json, MAX_FILE_BYTES};
+    use tauri_plugin_dialog::DialogExt;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .set_title("Import LineCaller configuration")
+        .add_filter("LineCaller configuration (JSON)", &["json"])
+        .pick_file(move |p| {
+            let _ = tx.send(p);
+        });
+    let Some(path) = rx.await.ok().flatten() else {
+        return Ok(None);
+    };
+    let path = path
+        .into_path()
+        .map_err(|e| AppError::new("storage", e.to_string()))?;
+    let meta = std::fs::metadata(&path).map_err(|e| {
+        AppError::new(
+            "importFailed",
+            format!("Could not read {}: {e}", path.display()),
+        )
+    })?;
+    if meta.len() > MAX_FILE_BYTES {
+        return Err(AppError::new(
+            "importFailed",
+            linecaller_core::config_file::ImportError::TooLarge.to_string(),
+        ));
+    }
+    let text = std::fs::read_to_string(&path).map_err(|e| {
+        AppError::new(
+            "importFailed",
+            format!("Could not read {}: {e}", path.display()),
+        )
+    })?;
+    import_json(&text)
+        .map(Some)
+        .map_err(|e| AppError::new("importFailed", e.to_string()))
 }

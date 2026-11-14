@@ -22,6 +22,10 @@ export interface Backend {
   refreshLines(): Promise<void>;
   clearRecents(): Promise<RecentCall[]>;
   simulateIncomingCall(lineIndex: number): Promise<void>;
+  /** Save settings to a readable .json file; resolves to the path, or null if cancelled. */
+  exportConfig(settings: Settings): Promise<string | null>;
+  /** Read a .json configuration file; resolves to validated settings (not yet saved), or null if cancelled. */
+  importConfig(): Promise<Settings | null>;
   subscribe(handlers: {
     connection: (s: ConnectionStatus) => void;
     line: (v: LineView) => void;
@@ -62,6 +66,8 @@ async function tauriBackend(): Promise<Backend> {
     refreshLines: () => call("refresh_lines"),
     clearRecents: () => call("clear_recents"),
     simulateIncomingCall: (lineIndex) => call("simulate_incoming_call", { lineIndex }),
+    exportConfig: (settings) => call("export_config", { settings }),
+    importConfig: () => call("import_config"),
     async subscribe(h) {
       const offs = await Promise.all([
         listen<ConnectionStatus>(EV_CONNECTION, (e) => h.connection(e.payload)),
