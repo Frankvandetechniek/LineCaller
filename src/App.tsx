@@ -6,6 +6,7 @@ import { audioLabel, callerName, linePhase, type AudioAction } from "./lib/lineL
 import { ChannelStrip } from "./components/ChannelStrip";
 import { Keypad } from "./components/Keypad";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { SettingsLock } from "./components/SettingsLock";
 import { ConnectionPill, ConnectionBanner } from "./components/Connection";
 import { Toasts, type Toast } from "./components/Toasts";
 import { IconFlask, IconRefresh, IconSettings } from "./components/Icons";
@@ -24,6 +25,8 @@ export default function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [keypad, setKeypad] = useState<{ lineIndex: number; audio: SendableAudio } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Settings opens only after the settings code is entered (see SettingsLock).
+  const [pinOpen, setPinOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [announce, setAnnounce] = useState("");
   const toastId = useRef(0);
@@ -207,7 +210,7 @@ export default function App() {
             disabled={!connected} onClick={() => void run(null, "refresh", () => backend.refreshLines())}>
             <IconRefresh />
           </button>
-          <button type="button" className="icon-btn" aria-label="Settings" title="Settings" onClick={() => setSettingsOpen(true)}>
+          <button type="button" className="icon-btn" aria-label="Settings" title="Settings" onClick={() => setPinOpen(true)}>
             <IconSettings />
           </button>
         </div>
@@ -219,7 +222,7 @@ export default function App() {
         hostMissing={!settings.simulator && !settings.host}
         onConnect={() => void run(null, "connect", () => backend.connect())}
         onDisconnect={() => void run(null, "disconnect", () => backend.disconnect())}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => setPinOpen(true)}
       />
 
       <main className="console" aria-label="Lines">
@@ -262,6 +265,9 @@ export default function App() {
           onClose={() => setKeypad(null)}
           onClearRecents={onClearRecents}
         />
+      )}
+      {pinOpen && (
+        <SettingsLock onClose={() => setPinOpen(false)} onUnlock={() => { setPinOpen(false); setSettingsOpen(true); }} />
       )}
       {settingsOpen && (
         <SettingsPanel

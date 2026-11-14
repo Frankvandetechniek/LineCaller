@@ -3,7 +3,7 @@
 // with the caller and the audio destination buttons; at the bottom ANSWER,
 // DROP/REJECT and a half-height LOCK.
 
-import { memo, useEffect, useState, type CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import type { LineView, SendableAudio } from "../lib/types";
 import {
   AUDIO_BUTTONS, audioButtonAction, audioLabel, callerName, canDrop, canLockLine,
@@ -95,23 +95,12 @@ function ChannelStripImpl(p: ChannelStripProps) {
   const titleId = `line-${index}-title`;
   const elapsed = formatDuration(now - (view?.stateSinceMs ?? now));
 
-  // Two-step DROP: first press arms, second confirms, auto-disarms after 4 s.
-  // REJECT on a ringing line acts on the first press.
-  const [armed, setArmed] = useState(false);
-  useEffect(() => {
-    if (!armed) return;
-    const t = setTimeout(() => setArmed(false), 4000);
-    return () => clearTimeout(t);
-  }, [armed]);
-  useEffect(() => { if (!busy) setArmed(false); }, [busy]);
-
   return (
     <section
       className="strip"
       id={`strip-${index}`}
       data-phase={phase}
       data-onair={onAir || undefined}
-      data-armed={armed || undefined}
       data-locked={lineLocked || undefined}
       data-colored={p.color ? true : undefined}
       style={p.color ? ({ ["--line-color" as string]: p.color } as CSSProperties) : undefined}
@@ -217,33 +206,18 @@ function ChannelStripImpl(p: ChannelStripProps) {
         <span>ANSWER</span>
       </button>
 
-      {/* ---- DROP / REJECT ---- */}
+      {/* ---- DROP / REJECT: acts on the first press ---- */}
       <button
         type="button"
         className="drop-btn"
-        data-armed={armed || undefined}
         disabled={!canDrop(view, myLocation, connected)}
         data-pending={p.pending === "drop" || undefined}
-        aria-describedby={armed ? `line-${index}-dropnote` : undefined}
-        aria-label={armed ? `Confirm: ${phase === "ringing" ? "reject call" : "drop call"} on line ${lineNo}` : `${phase === "ringing" ? "Reject" : "Drop"} line ${lineNo}`}
-        onClick={() => {
-          // An incoming call is rejected at once; a call in progress needs a confirming second press.
-          if (phase === "ringing") { setArmed(false); p.onDrop(index); return; }
-          if (!armed) { setArmed(true); return; }
-          setArmed(false);
-          p.onDrop(index);
-        }}
-        onKeyDown={(e) => { if (e.key === "Escape" && armed) { e.stopPropagation(); setArmed(false); } }}
-        onBlur={() => setArmed(false)}
+        aria-label={`${phase === "ringing" ? "Reject" : "Drop"} line ${lineNo}`}
+        onClick={() => p.onDrop(index)}
       >
         <IconPhoneOff size={16} />
-        <span>{armed ? "CONFIRM" : phase === "ringing" ? "REJECT" : "DROP"}</span>
+        <span>{phase === "ringing" ? "REJECT" : "DROP"}</span>
       </button>
-      {armed && (
-        <div className="drop-note" id={`line-${index}-dropnote`} role="alert">
-          Press again to {phase === "ringing" ? "reject" : "drop"}. Esc cancels.
-        </div>
-      )}
 
       {/* ---- LOCK = block incoming calls, last on the strip ---- */}
       <button
