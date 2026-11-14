@@ -118,11 +118,17 @@ mod tests {
         std::fs::write(old.join("settings.json"), "{\"port\":10101}").unwrap();
 
         migrate_legacy_files(&new, "settings.json");
-        assert_eq!(std::fs::read_to_string(new.join("settings.json")).unwrap(), "{\"port\":10101}");
+        assert_eq!(
+            std::fs::read_to_string(new.join("settings.json")).unwrap(),
+            "{\"port\":10101}"
+        );
 
         std::fs::write(new.join("settings.json"), "{\"port\":10102}").unwrap();
         migrate_legacy_files(&new, "settings.json");
-        assert_eq!(std::fs::read_to_string(new.join("settings.json")).unwrap(), "{\"port\":10102}");
+        assert_eq!(
+            std::fs::read_to_string(new.join("settings.json")).unwrap(),
+            "{\"port\":10102}"
+        );
 
         migrate_legacy_files(&new, "recents.json"); // no legacy file: nothing happens
         assert!(!new.join("recents.json").exists());
