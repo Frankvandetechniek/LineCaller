@@ -18,7 +18,7 @@ THipPro's own configuration.
 
 * 1 to 16 lines (configurable per installation), each drawn as a vertical **channel strip** side
   by side, like the fader modules of a mixing console: number and state on top, a caller display,
-  the destination keys, LOCK, and DROP at the bottom.
+  the destination keys, and at the bottom ANSWER, DROP/REJECT and a half-height LOCK.
 * Responsive: strips share the window width; when they no longer fit (many lines, small window,
   phone width) the console scrolls sideways with snap, like scrolling a bank. The "ringing" and
   "on air" counters in the top bar jump to the first matching line.
@@ -26,12 +26,13 @@ THipPro's own configuration.
   IN USE (location N), UNKNOWN. An incoming line **blinks orange, 500 ms on / 500 ms off**, for as
   long as it rings (solid orange if the OS asks for reduced motion). ON AIR lines get a red tally.
 * Caller number, name and city from the THipPro's screening information, with a call timer.
-* Per line: PRETALK, HOLD, ON-AIR A, ON-AIR B, LOCK, DROP.
+* Per line: PRETALK, HOLD, ON-AIR A, ON-AIR B, ANSWER, DROP, LOCK.
   * **LOCK locks the line for incoming calls** (Remote Light "Set Lock Line"): new calls are
-    rejected with busy, outgoing calls still work. Works on a free line too.
+    rejected with busy, outgoing calls still work. Works on a free line too. It turns purple
+    while active.
   * Free line: the audio buttons open the dial keypad with that destination preselected.
-  * Ringing line: a large **Answer to …** button (default destination is a setting), or answer
-    straight onto any destination.
+  * Ringing line: the green-outlined **ANSWER PRETALK** button right above REJECT (the destination
+    is a setting, PRETALK by default), or answer straight onto any destination.
   * Busy line: the audio buttons move the call; the keypad never opens.
 * Keypad with `*` and `#`, CALL, CLEAR and RECENTS (last 20 numbers dialled from this computer;
   picking one fills the keypad, it never calls by itself).

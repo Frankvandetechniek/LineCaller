@@ -186,7 +186,7 @@ export default function App() {
     if (i < 0) return;
     const el = document.getElementById(`strip-${i}`);
     el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-    el?.querySelector<HTMLButtonElement>(".answer-btn, .audio-btn")?.focus({ preventScroll: true });
+    el?.querySelector<HTMLButtonElement>(".answer-btn:not(:disabled), .audio-btn")?.focus({ preventScroll: true });
   };
   const keypadLine = keypad ? visible[keypad.lineIndex] : null;
   const keypadBusy = !!keypad && (!connected || linePhase(keypadLine, myLocation) !== "idle");

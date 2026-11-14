@@ -1,6 +1,7 @@
 // One telephone line drawn as a vertical channel strip, like a fader module on
 // a mixing console: number and state at the top, a "scribble strip" display
-// with the caller, the audio destination buttons, LOCK, and DROP at the bottom.
+// with the caller and the audio destination buttons; at the bottom ANSWER,
+// DROP/REJECT and a half-height LOCK.
 
 import { memo, useEffect, useState } from "react";
 import type { LineView, SendableAudio } from "../lib/types";
@@ -10,7 +11,7 @@ import {
 } from "../lib/lineLogic";
 import {
   AudioIcon, IconAlert, IconBell, IconBlock, IconFlask, IconLock, IconMapPin, IconPhone,
-  IconPhoneIncoming, IconPhoneOff, IconPhoneOutgoing, IconUnlock,
+  IconPhoneOff, IconPhoneOutgoing, IconUnlock,
 } from "./Icons";
 
 export interface ChannelStripProps {
@@ -155,21 +156,6 @@ function ChannelStripImpl(p: ChannelStripProps) {
         <p className="strip-note">Controlled by location {st!.location}</p>
       )}
 
-      {/* ---- answer (ringing only) ---- */}
-      {phase === "ringing" && (
-        <button
-          type="button"
-          className="answer-btn"
-          disabled={!connected}
-          onClick={() => p.onAudio(index, { type: "accept", audio: p.defaultAnswerAudio })}
-          aria-label={`Answer line ${lineNo} to ${audioLabel(p.defaultAnswerAudio)}`}
-        >
-          <IconPhoneIncoming size={18} />
-          <span>ANSWER</span>
-          <small>→ {audioLabel(p.defaultAnswerAudio)}</small>
-        </button>
-      )}
-
       {/* ---- audio destinations ---- */}
       <div className="row-label" id={`line-${index}-audio`}>{rowLabel(phase)}</div>
       <div className="audio-stack" role="group" aria-labelledby={`line-${index}-audio ${titleId}`}>
@@ -203,25 +189,6 @@ function ChannelStripImpl(p: ChannelStripProps) {
         })}
       </div>
 
-      {/* ---- LOCK = block incoming calls ---- */}
-      <div className="strip-locks">
-        <button
-          type="button"
-          className="lock-btn"
-          aria-pressed={lineLocked}
-          disabled={!canLockLine(view, myLocation, connected)}
-          data-pending={p.pending === "lock" || undefined}
-          title={lineLocked
-            ? "Line locked: incoming calls are rejected with busy. Outgoing calls are still possible. Press to unlock."
-            : "Lock this line: reject incoming calls with busy (outgoing calls stay possible)"}
-          onClick={() => p.onLockLine(index, !st?.lineLocked)}
-        >
-          {lineLocked ? <IconLock size={15} /> : <IconUnlock size={15} />}
-          <span className="lock-text">{lineLocked ? "LOCKED" : "LOCK"}</span>
-          <small>{lineLocked ? "no incoming" : "incoming open"}</small>
-        </button>
-      </div>
-
       <div className="strip-spacer" />
 
       {p.simulator && phase === "idle" && !lineLocked && (
@@ -230,7 +197,21 @@ function ChannelStripImpl(p: ChannelStripProps) {
         </button>
       )}
 
-      {/* ---- DROP at the bottom, like the fader ---- */}
+      {/* ---- ANSWER right above REJECT ---- */}
+      <button
+        type="button"
+        className="answer-btn"
+        data-ringing={phase === "ringing" || undefined}
+        disabled={phase !== "ringing" || !connected}
+        onClick={() => p.onAudio(index, { type: "accept", audio: p.defaultAnswerAudio })}
+        aria-label={`Answer line ${lineNo} to ${audioLabel(p.defaultAnswerAudio)}`}
+        title={phase === "ringing" ? `Answer onto ${audioLabel(p.defaultAnswerAudio)}` : "No incoming call"}
+      >
+        <span>ANSWER</span>
+        <span>{audioLabel(p.defaultAnswerAudio)}</span>
+      </button>
+
+      {/* ---- DROP / REJECT ---- */}
       <button
         type="button"
         className="drop-btn"
@@ -255,6 +236,23 @@ function ChannelStripImpl(p: ChannelStripProps) {
           Press again to {phase === "ringing" ? "reject" : "drop"}. Esc cancels.
         </div>
       )}
+
+      {/* ---- LOCK = block incoming calls, last on the strip ---- */}
+      <button
+        type="button"
+        className="lock-btn"
+        aria-pressed={lineLocked}
+        disabled={!canLockLine(view, myLocation, connected)}
+        data-pending={p.pending === "lock" || undefined}
+        aria-label={lineLocked ? `Line ${lineNo} locked, incoming calls blocked. Unlock` : `Lock line ${lineNo}: block incoming calls`}
+        title={lineLocked
+          ? "Line locked: incoming calls are rejected with busy. Outgoing calls are still possible. Press to unlock."
+          : "Lock this line: reject incoming calls with busy (outgoing calls stay possible)"}
+        onClick={() => p.onLockLine(index, !st?.lineLocked)}
+      >
+        {lineLocked ? <IconLock size={13} /> : <IconUnlock size={13} />}
+        <span>{lineLocked ? "LOCKED" : "LOCK"}</span>
+      </button>
     </section>
   );
 }
